@@ -1,27 +1,28 @@
 # Joystick_Pico Driver
 
-This is a driver for controlling the Joystick module, supporting the Raspberry Pi Pico platform. The driver provides complete joystick control, button detection, and status indication functions.
+This is a C++ driver for controlling Joystick modules with the Raspberry Pi Pico platform. The driver provides comprehensive joystick control, button detection, direction recognition, and RGB status indication.
 
 ## Features
 
-- I2C communication control (400kHz)
-- 12-bit ADC value reading
-- Direction detection (up, down, left, right, center)
+- I2C communication (100kHz default, configurable)
+- 12-bit and 8-bit ADC value reading
+- Enhanced direction detection (up, down, left, right, center)
 - Button state detection
-- RGB status light control
-- Auto-calibration function
+- RGB LED status indication
+- Calibration capabilities
 - Complete error handling
+- Direction stability enhancements
 
 ## Hardware Requirements
 
 - Raspberry Pi Pico
-- Joystick module
+- Joystick module (I2C interface)
 - Connection cables (SDA, SCL, VCC, GND)
 
 ## Pin Connections
 
 | Pico Pin | Joystick Pin | Description |
-|----------|--------------|------|
+|----------|--------------|-------------|
 | GPIO6    | SDA          | I2C data line |
 | GPIO7    | SCL          | I2C clock line |
 | 3V3      | VCC          | Power positive |
@@ -29,109 +30,128 @@ This is a driver for controlling the Joystick module, supporting the Raspberry P
 
 ## Quick Start
 
-1. Initialize the device
-```c
-joystick_init(i2c0, 6, 7);  // Using I2C0, SDA=6, SCL=7
+1. Include the header and create an instance
+```cpp
+#include "joystick.hpp"
+Joystick joystick;
 ```
 
-2. Main loop example
-```c
+2. Initialize the device
+```cpp
+// Using i2c1, Address 0x63, SDA Pin 6, SCL Pin 7
+joystick.begin(i2c1, 0x63, 6, 7); 
+```
+
+3. Main loop example
+```cpp
 while (true) {
-    // Update status (button detection and LED control)
-    joystick_update();
-    
     // Read joystick data
-    uint16_t x, y;
-    if (joystick_read_xy(&x, &y) == JOYSTICK_OK) {
-        // Process joystick data
-    }
+    uint16_t adc_x, adc_y;
+    joystick.get_joy_adc_16bits_value_xy(&adc_x, &adc_y);
     
-    sleep_ms(10);
+    // Read offset values (calibrated position)
+    int16_t offset_x = joystick.get_joy_adc_12bits_offset_value_x();
+    int16_t offset_y = joystick.get_joy_adc_12bits_offset_value_y();
+    
+    // Read button state (0=pressed, 1=not pressed)
+    uint8_t button = joystick.get_button_value();
+    
+    // Process direction
+    // ... direction determination code ...
+    
+    // Set LED based on operation state
+    joystick.set_rgb_color(0x0000FF); // Blue LED
+    
+    sleep_ms(20);
 }
 ```
 
-## Status LED Indications
+## Status LED Usage
 
-- Green steady light: Device working normally
-- Red steady light: Device not found or communication error
-- Green flashing light: Button pressed (50ms on, 200ms off)
+- Green: Device working normally/initialization successful
+- Blue: Active joystick operation
+- Off: No operation/idle state
 
 ## API Reference
 
 ### Initialization
-```c
-void joystick_init(i2c_inst_t *i2c_instance, uint sda_pin, uint scl_pin);
+```cpp
+bool begin(i2c_inst_t *i2c_port, uint8_t addr = 0x63, uint sda_pin = 21, uint scl_pin = 22, uint32_t speed = 400000UL);
 ```
 
 ### Data Reading
-```c
-joystick_error_t joystick_read_xy(uint16_t *x, uint16_t *y);
-uint8_t joystick_get_button(void);
+```cpp
+uint16_t get_joy_adc_value_x(adc_mode_t adc_bits);
+uint16_t get_joy_adc_value_y(adc_mode_t adc_bits);
+void get_joy_adc_16bits_value_xy(uint16_t *adc_x, uint16_t *adc_y);
+void get_joy_adc_8bits_value_xy(uint8_t *adc_x, uint8_t *adc_y);
+uint8_t get_button_value(void);
+```
+
+### Offset (Calibrated) Values
+```cpp
+int16_t get_joy_adc_12bits_offset_value_x(void);
+int16_t get_joy_adc_12bits_offset_value_y(void);
+int8_t get_joy_adc_8bits_offset_value_x(void);
+int8_t get_joy_adc_8bits_offset_value_y(void);
 ```
 
 ### Status Control
-```c
-void joystick_set_rgb(uint32_t color);
-void joystick_update(void);
+```cpp
+void set_rgb_color(uint32_t color);
+uint32_t get_rgb_color(void);
 ```
 
 ### Calibration Functions
-```c
-joystick_error_t joystick_get_calibration(joystick_calibration_t *cal);
-joystick_error_t joystick_set_calibration(const joystick_calibration_t *cal);
-joystick_error_t joystick_calibrate(void);
+```cpp
+void set_joy_adc_value_cal(uint16_t x_neg_min, uint16_t x_neg_max, uint16_t x_pos_min,
+                          uint16_t x_pos_max, uint16_t y_neg_min, uint16_t y_neg_max,
+                          uint16_t y_pos_min, uint16_t y_pos_max);
+                          
+void get_joy_adc_value_cal(uint16_t *x_neg_min, uint16_t *x_neg_max, uint16_t *x_pos_min,
+                          uint16_t *x_pos_max, uint16_t *y_neg_min, uint16_t *y_neg_max,
+                          uint16_t *y_pos_min, uint16_t *y_pos_max);
 ```
 
 ### Version Information
-```c
-uint8_t joystick_get_firmware_version(void);
-uint8_t joystick_get_bootloader_version(void);
+```cpp
+uint8_t get_firmware_version(void);
+uint8_t get_bootloader_version(void);
+uint8_t get_i2c_address(void);
+uint8_t set_i2c_address(uint8_t new_addr);
 ```
 
-## Error Handling
+## Direction Detection
 
-The driver uses the following error codes:
-```c
-typedef enum {
-    JOYSTICK_OK = 0,                   // Operation successful
-    JOYSTICK_ERROR_I2C = -1,           // I2C communication error
-    JOYSTICK_ERROR_INVALID_PARAM = -2, // Parameter error
-    JOYSTICK_ERROR_NOT_INITIALIZED = -3,// Not initialized
-    JOYSTICK_ERROR_CALIBRATION = -4    // Calibration error
-} joystick_error_t;
+The driver includes enhanced direction detection with the following features:
+
+- Direction ratio threshold (ensures clear direction detection)
+- Special handling for up direction to improve stability
+- Hysteresis prevention to avoid direction fluctuation
+- Configurable joystick threshold
+
+Default configuration in `main.cpp`:
+```cpp
+#define JOYSTICK_THRESHOLD 1500  // Center offset threshold
+#define DIRECTION_RATIO 1.5      // Direction determination ratio
 ```
 
-## Calibration Instructions
+## Building and Flashing
 
-1. Automatic calibration
-```c
-joystick_error_t ret = joystick_calibrate();
-if (ret == JOYSTICK_OK) {
-    // Calibration successful
-}
-```
-
-2. Manual calibration
-```c
-joystick_calibration_t cal;
-// Set calibration parameters
-cal.x_min = 0;
-cal.x_max = 4095;
-cal.y_min = 0;
-cal.y_max = 4095;
-joystick_set_calibration(&cal);
-```
+1. Set up the Raspberry Pi Pico SDK
+2. Run the `build_pico.bat` script to build
+3. Copy the generated `.uf2` file to the Pico when in BOOTSEL mode
 
 ## Notes
 
-1. Check the status LED after initialization to ensure the device is working properly
-2. It is recommended to calibrate before use for more accurate data
-3. The direction judgment threshold (ADC_THRESHOLD) can be adjusted according to actual needs
-4. Ensure there are no address conflicts on the I2C bus (default address 0x63)
+1. The green LED flash indicates successful initialization
+2. Direction detection uses both threshold and ratio tests for stability
+3. Configure `JOYSTICK_THRESHOLD` and `DIRECTION_RATIO` for your specific hardware
+4. I2C communication speed defaults to 100kHz but can be adjusted
 
 ## Example Code
 
-For complete example code, please refer to the `main.c` file.
+A complete example is provided in `src/main.cpp` demonstrating initialization, continuous polling, and direction detection.
 
 ## License
 
