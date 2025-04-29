@@ -1,27 +1,24 @@
-/*
- * SPDX-FileCopyrightText: 2024 M5Stack Technology CO LTD
- *
- * SPDX-License-Identifier: MIT
- */
-#ifndef _JOYSTICK_HPP_
-#define _JOYSTICK_HPP_
 
-#include "hardware/i2c.h"    // Use Pico I2C directly
-#include "pico/stdlib.h"     // For standard types and functions
+#ifndef _MY_JOYSTICK_H_
+#define _MY_JOYSTICK_H_
+
+#include <hardware/i2c.h>
+#include <pico/stdlib.h>
 #include <stdint.h>
-#include <stddef.h>
+#include <string.h>
+#include <stdio.h>
 
-#define JOYSTICK2_ADDR                        0x63
-#define JOYSTICK2_ADC_VALUE_12BITS_REG        0x00
-#define JOYSTICK2_ADC_VALUE_8BITS_REG         0x10
-#define JOYSTICK2_BUTTON_REG                  0x20
-#define JOYSTICK2_RGB_REG                     0x30
-#define JOYSTICK2_ADC_VALUE_CAL_REG           0x40
-#define JOYSTICK2_OFFSET_ADC_VALUE_12BITS_REG 0x50
-#define JOYSTICK2_OFFSET_ADC_VALUE_8BITS_REG  0x60
-#define JOYSTICK2_FIRMWARE_VERSION_REG        0xFE
-#define JOYSTICK2_BOOTLOADER_VERSION_REG      0xFC
-#define JOYSTICK2_I2C_ADDRESS_REG             0xFF
+#define JOYSTICK_ADDR                        0x63
+#define JOYSTICK_ADC_VALUE_12BITS_REG        0x00
+#define JOYSTICK_ADC_VALUE_8BITS_REG         0x10
+#define JOYSTICK_BUTTON_REG                  0x20
+#define JOYSTICK_RGB_REG                     0x30
+#define JOYSTICK_ADC_VALUE_CAL_REG           0x40
+#define JOYSTICK_OFFSET_ADC_VALUE_12BITS_REG 0x50
+#define JOYSTICK_OFFSET_ADC_VALUE_8BITS_REG  0x60
+#define JOYSTICK_FIRMWARE_VERSION_REG        0xFE
+#define JOYSTICK_BOOTLOADER_VERSION_REG      0xFC
+#define JOYSTICK_I2C_ADDRESS_REG             0xFF
 
 typedef enum { ADC_8BIT_RESULT = 0, ADC_16BIT_RESULT } adc_mode_t;
 
@@ -39,7 +36,7 @@ public:
      * @param speed I2C clock
      * @return 1 success, 0 false
      */
-    bool begin(i2c_inst_t *i2c_port, uint8_t addr = JOYSTICK2_ADDR, uint sda_pin = 21, uint scl_pin = 22,
+    bool begin(i2c_inst_t *i2c_port, uint8_t addr = JOYSTICK_ADDR, uint sda_pin = 21, uint scl_pin = 22,
                uint32_t speed = 400000UL);
 
     /**
@@ -166,8 +163,8 @@ public:
     void get_joy_adc_8bits_value_xy(uint8_t *adc_x, uint8_t *adc_y);
 
 private:
-    uint8_t _addr;
     i2c_inst_t *_i2c_port;
+    uint8_t _addr;
     uint _scl_pin;
     uint _sda_pin;
     uint32_t _speed;

@@ -1,6 +1,6 @@
-# M5Stack Unit Joystick2 Driver
+# Joystick_Pico Driver
 
-This is a driver for controlling the M5Stack Unit Joystick2 module, supporting the Raspberry Pi Pico platform. The driver provides complete joystick control, button detection, and status indication functions.
+This is a driver for controlling the Joystick module, supporting the Raspberry Pi Pico platform. The driver provides complete joystick control, button detection, and status indication functions.
 
 ## Features
 
@@ -15,12 +15,12 @@ This is a driver for controlling the M5Stack Unit Joystick2 module, supporting t
 ## Hardware Requirements
 
 - Raspberry Pi Pico
-- M5Stack Unit Joystick2 module
+- Joystick module
 - Connection cables (SDA, SCL, VCC, GND)
 
 ## Pin Connections
 
-| Pico Pin | Joystick2 Pin | Description |
+| Pico Pin | Joystick Pin | Description |
 |----------|--------------|------|
 | GPIO6    | SDA          | I2C data line |
 | GPIO7    | SCL          | I2C clock line |
@@ -31,18 +31,18 @@ This is a driver for controlling the M5Stack Unit Joystick2 module, supporting t
 
 1. Initialize the device
 ```c
-joystick2_init(i2c0, 6, 7);  // Using I2C0, SDA=6, SCL=7
+joystick_init(i2c0, 6, 7);  // Using I2C0, SDA=6, SCL=7
 ```
 
 2. Main loop example
 ```c
 while (true) {
     // Update status (button detection and LED control)
-    joystick2_update();
+    joystick_update();
     
     // Read joystick data
     uint16_t x, y;
-    if (joystick2_read_xy(&x, &y) == JOYSTICK2_OK) {
+    if (joystick_read_xy(&x, &y) == JOYSTICK_OK) {
         // Process joystick data
     }
     
@@ -60,32 +60,32 @@ while (true) {
 
 ### Initialization
 ```c
-void joystick2_init(i2c_inst_t *i2c_instance, uint sda_pin, uint scl_pin);
+void joystick_init(i2c_inst_t *i2c_instance, uint sda_pin, uint scl_pin);
 ```
 
 ### Data Reading
 ```c
-joystick2_error_t joystick2_read_xy(uint16_t *x, uint16_t *y);
-uint8_t joystick2_get_button(void);
+joystick_error_t joystick_read_xy(uint16_t *x, uint16_t *y);
+uint8_t joystick_get_button(void);
 ```
 
 ### Status Control
 ```c
-void joystick2_set_rgb(uint32_t color);
-void joystick2_update(void);
+void joystick_set_rgb(uint32_t color);
+void joystick_update(void);
 ```
 
 ### Calibration Functions
 ```c
-joystick2_error_t joystick2_get_calibration(joystick2_calibration_t *cal);
-joystick2_error_t joystick2_set_calibration(const joystick2_calibration_t *cal);
-joystick2_error_t joystick2_calibrate(void);
+joystick_error_t joystick_get_calibration(joystick_calibration_t *cal);
+joystick_error_t joystick_set_calibration(const joystick_calibration_t *cal);
+joystick_error_t joystick_calibrate(void);
 ```
 
 ### Version Information
 ```c
-uint8_t joystick2_get_firmware_version(void);
-uint8_t joystick2_get_bootloader_version(void);
+uint8_t joystick_get_firmware_version(void);
+uint8_t joystick_get_bootloader_version(void);
 ```
 
 ## Error Handling
@@ -93,33 +93,33 @@ uint8_t joystick2_get_bootloader_version(void);
 The driver uses the following error codes:
 ```c
 typedef enum {
-    JOYSTICK2_OK = 0,                   // Operation successful
-    JOYSTICK2_ERROR_I2C = -1,           // I2C communication error
-    JOYSTICK2_ERROR_INVALID_PARAM = -2, // Parameter error
-    JOYSTICK2_ERROR_NOT_INITIALIZED = -3,// Not initialized
-    JOYSTICK2_ERROR_CALIBRATION = -4    // Calibration error
-} joystick2_error_t;
+    JOYSTICK_OK = 0,                   // Operation successful
+    JOYSTICK_ERROR_I2C = -1,           // I2C communication error
+    JOYSTICK_ERROR_INVALID_PARAM = -2, // Parameter error
+    JOYSTICK_ERROR_NOT_INITIALIZED = -3,// Not initialized
+    JOYSTICK_ERROR_CALIBRATION = -4    // Calibration error
+} joystick_error_t;
 ```
 
 ## Calibration Instructions
 
 1. Automatic calibration
 ```c
-joystick2_error_t ret = joystick2_calibrate();
-if (ret == JOYSTICK2_OK) {
+joystick_error_t ret = joystick_calibrate();
+if (ret == JOYSTICK_OK) {
     // Calibration successful
 }
 ```
 
 2. Manual calibration
 ```c
-joystick2_calibration_t cal;
+joystick_calibration_t cal;
 // Set calibration parameters
 cal.x_min = 0;
 cal.x_max = 4095;
 cal.y_min = 0;
 cal.y_max = 4095;
-joystick2_set_calibration(&cal);
+joystick_set_calibration(&cal);
 ```
 
 ## Notes

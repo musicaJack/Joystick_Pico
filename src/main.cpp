@@ -9,7 +9,7 @@
 #define I2C_SDA_PIN 6        // I2C SDA pin
 #define I2C_SCL_PIN 7        // I2C SCL pin
 #define JOYSTICK_ADDR 0x63   // Joystick Unit I2C address
-#define I2C_SPEED 400 * 1000 // 400 kHz
+#define I2C_SPEED 100 * 1000 // 100 kHz
 
 // LED color definitions
 #define LED_OFF  0x000000    // Black (off)
@@ -20,7 +20,7 @@
 // Operation detection thresholds
 #define JOYSTICK_THRESHOLD 1500  // Joystick center offset threshold
 #define LOOP_DELAY_MS 20        // Loop delay time (milliseconds)
-#define PRINT_INTERVAL_MS 500   // Repeat print interval (milliseconds)
+#define PRINT_INTERVAL_MS 100   // Repeat print interval (milliseconds)
 #define DIRECTION_RATIO 1.5     // Direction determination ratio, ensures one direction is significantly greater than the other
 
 // ---------------------
@@ -102,6 +102,11 @@ int determine_joystick_direction(int16_t offset_x, int16_t offset_y) {
         return 0;
     }
     
+    // 为"上"方向单独使用更敏感的判断逻辑
+    if (offset_y < -JOYSTICK_THRESHOLD && abs_y > abs_x * 1.5) {
+        return 1; // Up - 使用更低的比例要求
+    }
+    
     // Only detect up/down when y-direction is significantly greater than x-direction
     if (abs_y > abs_x * DIRECTION_RATIO) {
         if (offset_y < 0) return 1; // Up
@@ -114,8 +119,8 @@ int determine_joystick_direction(int16_t offset_x, int16_t offset_y) {
         else return 4;              // Right
     }
     
-    // If no clear direction, maintain the previous direction for stability
-    return last_direction;
+    // 防止不明确方向时保持上次方向状态，改为返回0
+    return 0;
 }
 
 void loop() {
