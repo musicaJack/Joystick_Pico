@@ -3,10 +3,9 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#ifndef _M5_UNIT_JOYSTICK2_HPP_
-#define _M5_UNIT_JOYSTICK2_HPP_
+#ifndef _JOYSTICK_HPP_
+#define _JOYSTICK_HPP_
 
-// #include "PicoTwoWire.hpp" // Removed compatibility layer
 #include "hardware/i2c.h"    // Use Pico I2C directly
 #include "pico/stdlib.h"     // For standard types and functions
 #include <stdint.h>
@@ -27,12 +26,12 @@
 typedef enum { ADC_8BIT_RESULT = 0, ADC_16BIT_RESULT } adc_mode_t;
 
 /**
- * @brief Unit Joystick2 control API
+ * @brief Joystick control API
  */
-class M5UnitJoystick2 {
+class Joystick {
 public:
     /**
-     * @brief Unit Joystick2 init
+     * @brief Joystick initialization
      * @param i2c_port I2C port
      * @param addr I2C address
      * @param sda_pin SDA Pin
@@ -44,64 +43,64 @@ public:
                uint32_t speed = 400000UL);
 
     /**
-     * @brief set Unit Joystick2 I2C address
+     * @brief Set Joystick I2C address
      * @param addr I2C address
      * @return 1 success, 0 false
      */
     uint8_t set_i2c_address(uint8_t addr);
 
     /**
-     * @brief get Unit Joystick2 I2C address
+     * @brief Get Joystick I2C address
      * @return I2C address
      */
     uint8_t get_i2c_address(void);
 
     /**
-     * @brief get Unit Joystick2 firmware version
+     * @brief Get Joystick firmware version
      * @return firmware version
      */
     uint8_t get_firmware_version(void);
 
     /**
-     * @brief get Unit Joystick2 bootloader version
+     * @brief Get Joystick bootloader version
      * @return bootloader version
      */
     uint8_t get_bootloader_version(void);
 
     /**
-     * @brief get Unit Joystick2 x-axis ADC value
+     * @brief Get Joystick x-axis ADC value
      * @param adc_bits ADC_8BIT_RESULT or ADC_16BIT_RESULT
      * @return x-axis ADC value
      */
     uint16_t get_joy_adc_value_x(adc_mode_t adc_bits);
 
     /**
-     * @brief get Unit Joystick2 y-axis ADC value
+     * @brief Get Joystick y-axis ADC value
      * @param adc_bits ADC_8BIT_RESULT or ADC_16BIT_RESULT
      * @return y-axis ADC value
      */
     uint16_t get_joy_adc_value_y(adc_mode_t adc_bits);
 
     /**
-     * @brief get Unit Joystick2 button value
+     * @brief Get Joystick button value
      * @return 0 press, 1 no press
      */
     uint8_t get_button_value(void);
 
     /**
-     * @brief set Unit Joystick2 rgb color
+     * @brief Set Joystick RGB color
      * @param color rgb color
      */
     void set_rgb_color(uint32_t color);
 
     /**
-     * @brief get Unit Joystick2 rgb color
+     * @brief Get Joystick RGB color
      * @return rgb color
      */
     uint32_t get_rgb_color(void);
 
     /**
-     * @brief get Unit Joystick2 mapped cal value
+     * @brief Get Joystick mapped calibration values
      * @param x_neg_min pointer of x-axis negative minimum value
      * @param x_neg_max pointer of x-axis negative maximum value
      * @param x_pos_min pointer of x-axis positive minimum value
@@ -115,7 +114,7 @@ public:
                                uint16_t *y_neg_min, uint16_t *y_neg_max, uint16_t *y_pos_min, uint16_t *y_pos_max);
 
     /**
-     * @brief set Unit Joystick2 mapped cal value
+     * @brief Set Joystick mapped calibration values
      * @param x_neg_min x-axis negative minimum value
      * @param x_neg_max x-axis negative maximum value
      * @param x_pos_min x-axis positive minimum value
@@ -129,38 +128,38 @@ public:
                                uint16_t y_neg_min, uint16_t y_neg_max, uint16_t y_pos_min, uint16_t y_pos_max);
 
     /**
-     * @brief get Unit Joystick2 x-axis 12bits mapped value
+     * @brief Get Joystick x-axis 12bits mapped value
      * @return x-axis 12bits mapped value
      */
     int16_t get_joy_adc_12bits_offset_value_x(void);
 
     /**
-     * @brief get Unit Joystick2 y-axis 12bits mapped value
+     * @brief Get Joystick y-axis 12bits mapped value
      * @return y-axis 12bits mapped value
      */
     int16_t get_joy_adc_12bits_offset_value_y(void);
 
     /**
-     * @brief get Unit Joystick2 x-axis 8bits mapped value
+     * @brief Get Joystick x-axis 8bits mapped value
      * @return x-axis 8bits mapped value
      */
     int8_t get_joy_adc_8bits_offset_value_x(void);
 
     /**
-     * @brief get Unit Joystick2 y-axis 8bits mapped value
+     * @brief Get Joystick y-axis 8bits mapped value
      * @return y-axis 8bits mapped value
      */
     int8_t get_joy_adc_8bits_offset_value_y(void);
 
     /**
-     * @brief get Unit Joystick2 x-axis and y-axis 16bits ADC value
+     * @brief Get Joystick x-axis and y-axis 16bits ADC values
      * @param adc_x pointer of x-axis ADC value
      * @param adc_y pointer of y-axis ADC value
      */
     void get_joy_adc_16bits_value_xy(uint16_t *adc_x, uint16_t *adc_y);
 
     /**
-     * @brief get Unit Joystick2 x-axis and y-axis 8bits ADC value
+     * @brief Get Joystick x-axis and y-axis 8bits ADC values
      * @param adc_x pointer of x-axis ADC value
      * @param adc_y pointer of y-axis ADC value
      */

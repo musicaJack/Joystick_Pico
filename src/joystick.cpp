@@ -3,8 +3,7 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#include "m5_unit_joystick.hpp"
-// #include "PicoTwoWire.hpp" // Removed compatibility layer
+#include "joystick.hpp"
 #include "hardware/i2c.h"
 #include "pico/stdlib.h"
 #include <cstring> // For memcpy
@@ -33,11 +32,7 @@ static inline int reg_write(i2c_inst_t *i2c, uint8_t addr, uint8_t reg, const ui
     return ret;
 }
 
-// Removed old M5UnitJoystick2::write_bytes and M5UnitJoystick2::read_bytes
-
-// bool M5UnitJoystick2::begin(PicoTwoWire *wire, uint8_t addr, uint8_t sda, uint8_t scl, uint32_t speed)
-// Old signature
-bool M5UnitJoystick2::begin(i2c_inst_t *i2c_port, uint8_t addr, uint sda_pin, uint scl_pin, uint32_t speed)
+bool Joystick::begin(i2c_inst_t *i2c_port, uint8_t addr, uint sda_pin, uint scl_pin, uint32_t speed)
 {
     _i2c_port = i2c_port;
     _addr     = addr;
@@ -63,7 +58,7 @@ bool M5UnitJoystick2::begin(i2c_inst_t *i2c_port, uint8_t addr, uint sda_pin, ui
     return (ret >= 0); // Returns PICO_ERROR_GENERIC (-1) if NACK received (no device)
 }
 
-uint16_t M5UnitJoystick2::get_joy_adc_value_x(adc_mode_t adc_bits)
+uint16_t Joystick::get_joy_adc_value_x(adc_mode_t adc_bits)
 {
     uint8_t data[2];
     uint16_t value = 0;
@@ -87,7 +82,7 @@ uint16_t M5UnitJoystick2::get_joy_adc_value_x(adc_mode_t adc_bits)
     return value;
 }
 
-void M5UnitJoystick2::get_joy_adc_16bits_value_xy(uint16_t *adc_x, uint16_t *adc_y)
+void Joystick::get_joy_adc_16bits_value_xy(uint16_t *adc_x, uint16_t *adc_y)
 {
     uint8_t data[4];
     uint8_t reg = JOYSTICK2_ADC_VALUE_12BITS_REG;
@@ -101,7 +96,7 @@ void M5UnitJoystick2::get_joy_adc_16bits_value_xy(uint16_t *adc_x, uint16_t *adc
     }
 }
 
-void M5UnitJoystick2::get_joy_adc_8bits_value_xy(uint8_t *adc_x, uint8_t *adc_y)
+void Joystick::get_joy_adc_8bits_value_xy(uint8_t *adc_x, uint8_t *adc_y)
 {
     uint8_t data[2];
     uint8_t reg = JOYSTICK2_ADC_VALUE_8BITS_REG;
@@ -115,7 +110,7 @@ void M5UnitJoystick2::get_joy_adc_8bits_value_xy(uint8_t *adc_x, uint8_t *adc_y)
     }
 }
 
-uint16_t M5UnitJoystick2::get_joy_adc_value_y(adc_mode_t adc_bits)
+uint16_t Joystick::get_joy_adc_value_y(adc_mode_t adc_bits)
 {
     uint8_t data[2];
     uint16_t value = 0;
@@ -139,7 +134,7 @@ uint16_t M5UnitJoystick2::get_joy_adc_value_y(adc_mode_t adc_bits)
     return value;
 }
 
-int16_t M5UnitJoystick2::get_joy_adc_12bits_offset_value_x(void)
+int16_t Joystick::get_joy_adc_12bits_offset_value_x(void)
 {
     int16_t value = 0;
     uint8_t reg = JOYSTICK2_OFFSET_ADC_VALUE_12BITS_REG;
@@ -147,7 +142,7 @@ int16_t M5UnitJoystick2::get_joy_adc_12bits_offset_value_x(void)
     return value;
 }
 
-int16_t M5UnitJoystick2::get_joy_adc_12bits_offset_value_y(void)
+int16_t Joystick::get_joy_adc_12bits_offset_value_y(void)
 {
     int16_t value = 0;
     uint8_t reg = JOYSTICK2_OFFSET_ADC_VALUE_12BITS_REG + 2;
@@ -155,7 +150,7 @@ int16_t M5UnitJoystick2::get_joy_adc_12bits_offset_value_y(void)
     return value;
 }
 
-int8_t M5UnitJoystick2::get_joy_adc_8bits_offset_value_x(void)
+int8_t Joystick::get_joy_adc_8bits_offset_value_x(void)
 {
     int8_t value = 0;
     uint8_t reg = JOYSTICK2_OFFSET_ADC_VALUE_8BITS_REG;
@@ -163,7 +158,7 @@ int8_t M5UnitJoystick2::get_joy_adc_8bits_offset_value_x(void)
     return value;
 }
 
-int8_t M5UnitJoystick2::get_joy_adc_8bits_offset_value_y(void)
+int8_t Joystick::get_joy_adc_8bits_offset_value_y(void)
 {
     int8_t value = 0;
     uint8_t reg = JOYSTICK2_OFFSET_ADC_VALUE_8BITS_REG + 1;
@@ -171,9 +166,9 @@ int8_t M5UnitJoystick2::get_joy_adc_8bits_offset_value_y(void)
     return value;
 }
 
-void M5UnitJoystick2::set_joy_adc_value_cal(uint16_t x_neg_min, uint16_t x_neg_max, uint16_t x_pos_min,
-                                            uint16_t x_pos_max, uint16_t y_neg_min, uint16_t y_neg_max,
-                                            uint16_t y_pos_min, uint16_t y_pos_max)
+void Joystick::set_joy_adc_value_cal(uint16_t x_neg_min, uint16_t x_neg_max, uint16_t x_pos_min,
+                                 uint16_t x_pos_max, uint16_t y_neg_min, uint16_t y_neg_max,
+                                 uint16_t y_pos_min, uint16_t y_pos_max)
 {
     uint8_t data[16];
     memcpy(&data[0], (uint8_t *)&x_neg_min, 2);
@@ -188,9 +183,9 @@ void M5UnitJoystick2::set_joy_adc_value_cal(uint16_t x_neg_min, uint16_t x_neg_m
     reg_write(_i2c_port, _addr, JOYSTICK2_ADC_VALUE_CAL_REG, data, 16);
 }
 
-void M5UnitJoystick2::get_joy_adc_value_cal(uint16_t *x_neg_min, uint16_t *x_neg_max, uint16_t *x_pos_min,
-                                            uint16_t *x_pos_max, uint16_t *y_neg_min, uint16_t *y_neg_max,
-                                            uint16_t *y_pos_min, uint16_t *y_pos_max)
+void Joystick::get_joy_adc_value_cal(uint16_t *x_neg_min, uint16_t *x_neg_max, uint16_t *x_pos_min,
+                                 uint16_t *x_pos_max, uint16_t *y_neg_min, uint16_t *y_neg_max,
+                                 uint16_t *y_pos_min, uint16_t *y_pos_max)
 {
     uint8_t data[16];
     int ret = reg_read(_i2c_port, _addr, JOYSTICK2_ADC_VALUE_CAL_REG, data, 16);
@@ -204,12 +199,12 @@ void M5UnitJoystick2::get_joy_adc_value_cal(uint16_t *x_neg_min, uint16_t *x_neg
         memcpy((uint8_t *)y_pos_min, &data[12], 2);
         memcpy((uint8_t *)y_pos_max, &data[14], 2);
     } else {
-        // Handle error? Maybe zero out the values?
+        // Handle error by zeroing out the values
         memset(x_neg_min, 0, sizeof(uint16_t) * 8); // Zero out all params
     }
 }
 
-uint8_t M5UnitJoystick2::get_button_value(void)
+uint8_t Joystick::get_button_value(void)
 {
     uint8_t data = 1; // Default to not pressed
     uint8_t reg = JOYSTICK2_BUTTON_REG;
@@ -217,47 +212,46 @@ uint8_t M5UnitJoystick2::get_button_value(void)
     return data;
 }
 
-void M5UnitJoystick2::set_rgb_color(uint32_t color)
+void Joystick::set_rgb_color(uint32_t color)
 {
-    // Color is likely sent as R, G, B, Brightness (or similar 4 bytes)
-    // Assuming byte order matches the register layout directly
+    // Color is sent as R, G, B, Brightness (4 bytes)
     reg_write(_i2c_port, _addr, JOYSTICK2_RGB_REG, (uint8_t *)&color, 4);
 }
 
-uint32_t M5UnitJoystick2::get_rgb_color(void)
+uint32_t Joystick::get_rgb_color(void)
 {
     uint32_t rgb_read_buff = 0;
     reg_read(_i2c_port, _addr, JOYSTICK2_RGB_REG, (uint8_t *)&rgb_read_buff, 4);
     return rgb_read_buff;
 }
 
-uint8_t M5UnitJoystick2::get_bootloader_version(void)
+uint8_t Joystick::get_firmware_version(void)
+{
+    uint8_t reg_value = 0;
+    reg_read(_i2c_port, _addr, JOYSTICK2_FIRMWARE_VERSION_REG, &reg_value, 1);
+    return reg_value;
+}
+
+uint8_t Joystick::get_bootloader_version(void)
 {
     uint8_t reg_value = 0;
     reg_read(_i2c_port, _addr, JOYSTICK2_BOOTLOADER_VERSION_REG, &reg_value, 1);
     return reg_value;
 }
 
-uint8_t M5UnitJoystick2::get_i2c_address(void)
+uint8_t Joystick::get_i2c_address(void)
 {
     uint8_t reg_value = 0;
     reg_read(_i2c_port, _addr, JOYSTICK2_I2C_ADDRESS_REG, &reg_value, 1);
     return reg_value;
 }
 
-uint8_t M5UnitJoystick2::set_i2c_address(uint8_t new_addr)
+uint8_t Joystick::set_i2c_address(uint8_t new_addr)
 {
     int ret = reg_write(_i2c_port, _addr, JOYSTICK2_I2C_ADDRESS_REG, &new_addr, 1);
-    if (ret >= 0) {
-        _addr = new_addr; // Update stored address on success
-        return 1; // Success (Arduino style)
+    if (ret > 0) {
+        _addr = new_addr;
+        return 1;
     }
-    return 0; // Failure
-}
-
-uint8_t M5UnitJoystick2::get_firmware_version(void)
-{
-    uint8_t reg_value = 0;
-    reg_read(_i2c_port, _addr, JOYSTICK2_FIRMWARE_VERSION_REG, &reg_value, 1);
-    return reg_value;
+    return 0;
 } 

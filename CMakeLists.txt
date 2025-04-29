@@ -20,7 +20,7 @@ include_directories(include)
 # Add source files
 add_executable(${PROJECT_NAME}
     src/main.cpp
-    src/m5_unit_joystick.cpp 
+    src/joystick.cpp 
 )
 
 # Link necessary Pico libraries
