@@ -7,6 +7,7 @@ This is a C++ driver for controlling Joystick modules with the Raspberry Pi Pico
 - I2C communication (100kHz default, configurable)
 - 12-bit and 8-bit ADC value reading
 - Enhanced direction detection (up, down, left, right, center)
+- Advanced debouncing and stability algorithms
 - Button state detection
 - RGB LED status indication
 - Calibration capabilities
@@ -121,18 +122,34 @@ uint8_t get_i2c_address(void);
 uint8_t set_i2c_address(uint8_t new_addr);
 ```
 
-## Direction Detection
+## Enhanced Direction Detection & Debouncing
 
-The driver includes enhanced direction detection with the following features:
+The latest version includes advanced debouncing and stability features:
 
-- Direction ratio threshold (ensures clear direction detection)
-- Special handling for up direction to improve stability
-- Hysteresis prevention to avoid direction fluctuation
-- Configurable joystick threshold
+- **Direction detection with enhanced stability:**
+  - Higher threshold for detecting valid movement (1800 vs previous 1500)
+  - Improved direction ratio calculation for more reliable detection
+  - Special handling for "up" direction with customized sensitivity
+  - Deadzone implementation to reduce jitter
+  
+- **Advanced debouncing algorithm:**
+  - Requires 3 consecutive same readings to consider a direction stable
+  - Needs 5 stable center readings to confirm true joystick release
+  - Gradual stability counter reduction instead of immediate reset
+  - Separate tracking for active direction and release state
 
-Default configuration in `main.cpp`:
+- **Continuous operation support:**
+  - Allows repeated output when holding a direction
+  - Controls output frequency with configurable interval (250ms)
+  - Immediate output on direction change
+
+## Configuration
+
+Key parameters in `main.cpp`:
 ```cpp
-#define JOYSTICK_THRESHOLD 1500  // Center offset threshold
+#define JOYSTICK_THRESHOLD 1800  // Increased threshold to reduce false triggers
+#define LOOP_DELAY_MS 20         // Loop delay time (milliseconds)
+#define PRINT_INTERVAL_MS 250    // Repeat print interval (milliseconds)
 #define DIRECTION_RATIO 1.5      // Direction determination ratio
 ```
 
@@ -145,13 +162,13 @@ Default configuration in `main.cpp`:
 ## Notes
 
 1. The green LED flash indicates successful initialization
-2. Direction detection uses both threshold and ratio tests for stability
-3. Configure `JOYSTICK_THRESHOLD` and `DIRECTION_RATIO` for your specific hardware
-4. I2C communication speed defaults to 100kHz but can be adjusted
+2. Blue LED shows active operation, automatically turning off upon release
+3. Configure parameters for your specific hardware sensitivity
+4. The debouncing algorithm balances responsiveness with stability
 
 ## Example Code
 
-A complete example is provided in `src/main.cpp` demonstrating initialization, continuous polling, and direction detection.
+A complete example is provided in `src/main.cpp` demonstrating initialization, continuous polling, and enhanced direction detection with debouncing.
 
 ## License
 

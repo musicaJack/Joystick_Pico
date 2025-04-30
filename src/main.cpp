@@ -18,9 +18,9 @@
 #define LED_BLUE 0x0000FF    // Blue
 
 // Operation detection thresholds
-#define JOYSTICK_THRESHOLD 1500  // Joystick center offset threshold
+#define JOYSTICK_THRESHOLD 1800  // Increased joystick threshold to reduce false triggers
 #define LOOP_DELAY_MS 20        // Loop delay time (milliseconds)
-#define PRINT_INTERVAL_MS 100   // Repeat print interval (milliseconds)
+#define PRINT_INTERVAL_MS 250   // Repeat print interval (milliseconds)
 #define DIRECTION_RATIO 1.5     // Direction determination ratio, ensures one direction is significantly greater than the other
 
 // ---------------------
@@ -73,10 +73,11 @@ void setup() {
 
 // Print operation information and update last print time
 void print_operation(int direction) {
-    // If it's a new direction or time since last print exceeds the set interval
+    // If it's a new direction or transition from no direction to having direction, print immediately
+    // If same direction is held, print at time intervals
     bool is_time_to_print = absolute_time_diff_us(last_print_time, get_absolute_time()) > PRINT_INTERVAL_MS * 1000;
     
-    // Only print when direction changes or print interval is reached
+    // Print when direction changes or time interval is reached
     if (direction != last_direction || (is_time_to_print && direction > 0)) {
         last_direction = direction;
         last_print_time = get_absolute_time();
@@ -97,29 +98,36 @@ int determine_joystick_direction(int16_t offset_x, int16_t offset_y) {
     int abs_x = abs(offset_x);
     int abs_y = abs(offset_y);
     
-    // If both values are below threshold, assume no operation
+    // Use higher threshold to detect valid movement
     if (abs_x < JOYSTICK_THRESHOLD && abs_y < JOYSTICK_THRESHOLD) {
         return 0;
     }
     
-    // 为"上"方向单独使用更敏感的判断逻辑
-    if (offset_y < -JOYSTICK_THRESHOLD && abs_y > abs_x * 1.5) {
-        return 1; // Up - 使用更低的比例要求
+    // Introduce deadzone concept to reduce jitter
+    if (abs_x < JOYSTICK_THRESHOLD * 0.8 && abs_y < JOYSTICK_THRESHOLD * 0.8) {
+        return 0;
     }
     
-    // Only detect up/down when y-direction is significantly greater than x-direction
-    if (abs_y > abs_x * DIRECTION_RATIO) {
-        if (offset_y < 0) return 1; // Up
-        else return 2;              // Down
+    // Use more sensitive detection logic for "up" direction
+    if (offset_y < -JOYSTICK_THRESHOLD * 1.1 && abs_y > abs_x * 1.3) {
+        return 1; // Up - using lower ratio requirement
     }
     
-    // Only detect left/right when x-direction is significantly greater than y-direction
-    if (abs_x > abs_y * DIRECTION_RATIO) {
-        if (offset_x < 0) return 3; // Left
-        else return 4;              // Right
+    // Use higher direction ratio for up/down detection to improve stability
+    if (abs_y > abs_x * (DIRECTION_RATIO + 0.2)) {
+        if (offset_y < -JOYSTICK_THRESHOLD) return 1; // Up 
+        else if (offset_y > JOYSTICK_THRESHOLD) return 2; // Down
+        else return 0; // Unclear direction
     }
     
-    // 防止不明确方向时保持上次方向状态，改为返回0
+    // Use higher direction ratio for left/right detection to improve stability
+    if (abs_x > abs_y * (DIRECTION_RATIO + 0.2)) {
+        if (offset_x < -JOYSTICK_THRESHOLD) return 3; // Left
+        else if (offset_x > JOYSTICK_THRESHOLD) return 4; // Right
+        else return 0; // Unclear direction
+    }
+    
+    // Return 0 when direction is unclear
     return 0;
 }
 
@@ -127,6 +135,9 @@ void loop() {
     // Use separate variables to track if operation occurred
     bool operation_detected = false;
     int current_direction = 0; // 0=none, 1=up, 2=down, 3=left, 4=right, 5=mid
+    static int previous_raw_direction = 0; // Previous direction for debouncing
+    static uint8_t stable_count = 0; // Stability counter
+    static uint8_t release_count = 0; // Release counter to confirm joystick returned to center
     
     // Declare joystick-related variables
     uint16_t adc_x = 0, adc_y = 0;
@@ -140,27 +151,66 @@ void loop() {
     offset_x = joystick.get_joy_adc_12bits_offset_value_x();
     offset_y = joystick.get_joy_adc_12bits_offset_value_y();
     
+    // Get raw direction signal
+    int raw_direction = 0;
+    
     // Priority handle button status - immediate response
     if (button_state == 0) { // Button pressed
-        operation_detected = true;
-        current_direction = 5; // mid
+        raw_direction = 5; // mid button
     } 
     // Only detect joystick direction when button is not pressed
     else {
         // Use stricter direction determination logic
-        current_direction = determine_joystick_direction(offset_x, offset_y);
+        raw_direction = determine_joystick_direction(offset_x, offset_y);
+    }
+    
+    // Enhanced debouncing processing
+    if (raw_direction == previous_raw_direction) {
+        // Direction is stable, increase stability count
+        if (stable_count < 3) { // Need at least 3 consecutive same readings to consider stable
+            stable_count++;
+        }
         
-        // Detect joystick movement
-        if (current_direction > 0) {
+        // If in center position (0), increase release count
+        if (raw_direction == 0) {
+            if (release_count < 5) { // Need 5 stable center readings to confirm true release
+                release_count++;
+            }
+        } else {
+            release_count = 0; // Non-center position, reset release count
+        }
+    } else {
+        // Direction changed, partially reset stability count
+        if (stable_count > 0) {
+            stable_count--;
+        }
+        previous_raw_direction = raw_direction;
+        
+        // If new direction is center, start release counting
+        if (raw_direction == 0) {
+            release_count = 1;
+        } else {
+            release_count = 0;
+        }
+    }
+    
+    // Only process when direction is stable
+    if (stable_count >= 3) {
+        // Button debouncing - avoid jitter triggering
+        if (raw_direction != 0) { // Valid direction
+            current_direction = raw_direction;
             operation_detected = true;
         }
     }
     
+    // Use stricter release detection when joystick returns to center
+    bool joystick_released = (release_count >= 5);
+    
     // If there is operation, print current direction
     if (current_direction > 0) {
         print_operation(current_direction);
-    } else {
-        // When returning to center position, reset direction state
+    } else if (joystick_released) {
+        // Only reset direction state when joystick is confirmed to be stable at center
         last_direction = 0;
     }
     
@@ -171,7 +221,7 @@ void loop() {
         joystick.set_rgb_color(LED_BLUE);
     }
     // When all operations end, immediately turn off blue LED
-    else if (!operation_detected && is_active) {
+    else if (!operation_detected && is_active && joystick_released) {
         is_active = false;
         joystick.set_rgb_color(LED_OFF);
     }
