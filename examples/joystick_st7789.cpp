@@ -47,9 +47,15 @@ struct WanderingDots {
     uint8_t count;
 };
 
+// 定义盖章位置结构
+struct StampPosition {
+    BlockPosition pos;
+    uint8_t hit_count;  // 碰撞次数
+};
+
 // 定义盖章位置数组
 struct StampPositions {
-    BlockPosition positions[MAX_STAMPS];
+    StampPosition positions[MAX_STAMPS];
     uint8_t count;
 };
 
@@ -66,7 +72,7 @@ void clearBlock(st7789::ST7789& lcd, const BlockPosition& pos) {
 // 绘制所有盖章方块
 void drawAllStamps(st7789::ST7789& lcd, const StampPositions& stamps) {
     for (uint8_t i = 0; i < stamps.count; i++) {
-        drawBlock(lcd, stamps.positions[i], true);
+        drawBlock(lcd, stamps.positions[i].pos, true);
     }
 }
 
@@ -80,14 +86,16 @@ void clearDot(st7789::ST7789& lcd, const BlockPosition& pos) {
     lcd.fillCircle(pos.x + BLOCK_SIZE/2, pos.y + BLOCK_SIZE/2, BLOCK_SIZE/2, BG_COLOR);
 }
 
-// 检查位置是否与任何stamp重叠，并返回碰撞方向
-int checkCollisionDirection(const BlockPosition& pos, const StampPositions& stamps) {
+// 检查位置是否与任何stamp重叠，并返回碰撞方向和索引
+int checkCollisionDirection(const BlockPosition& pos, const StampPositions& stamps, uint8_t& hit_index) {
     for (uint8_t i = 0; i < stamps.count; i++) {
-        if (abs(pos.x - stamps.positions[i].x) < BLOCK_SIZE &&
-            abs(pos.y - stamps.positions[i].y) < BLOCK_SIZE) {
+        if (abs(pos.x - stamps.positions[i].pos.x) < BLOCK_SIZE &&
+            abs(pos.y - stamps.positions[i].pos.y) < BLOCK_SIZE) {
             // 计算碰撞方向
-            int dx = pos.x - stamps.positions[i].x;
-            int dy = pos.y - stamps.positions[i].y;
+            int dx = pos.x - stamps.positions[i].pos.x;
+            int dy = pos.y - stamps.positions[i].pos.y;
+            
+            hit_index = i;  // 记录碰撞的方块索引
             
             // 确定主要碰撞方向
             if (abs(dx) > abs(dy)) {
@@ -110,7 +118,7 @@ void generateRandomSpeed(WanderingDot& dot) {
 }
 
 // 更新游走圆点的位置
-void updateWanderingDot(WanderingDot& dot, const StampPositions& stamps) {
+void updateWanderingDot(WanderingDot& dot, StampPositions& stamps) {
     if (!dot.active) return;
 
     // 保存旧位置
@@ -131,9 +139,22 @@ void updateWanderingDot(WanderingDot& dot, const StampPositions& stamps) {
     }
     
     // 检查是否与stamp重叠
-    if (checkCollisionDirection(dot.pos, stamps) != 0) {
+    uint8_t hit_index;
+    if (checkCollisionDirection(dot.pos, stamps, hit_index) != 0) {
         // 回退到碰撞前的位置
         dot.pos = old_pos;
+        
+        // 增加碰撞计数
+        stamps.positions[hit_index].hit_count++;
+        
+        // 如果碰撞次数达到2次，移除该方块
+        if (stamps.positions[hit_index].hit_count >= 2) {
+            // 将最后一个方块移到当前位置
+            if (hit_index < stamps.count - 1) {
+                stamps.positions[hit_index] = stamps.positions[stamps.count - 1];
+            }
+            stamps.count--;
+        }
         
         // 生成新的随机速度，但保持一定的速度大小
         do {
@@ -148,7 +169,7 @@ void updateWanderingDot(WanderingDot& dot, const StampPositions& stamps) {
 }
 
 // 更新所有小球的位置
-void updateAllDots(WanderingDots& dots, const StampPositions& stamps) {
+void updateAllDots(WanderingDots& dots, StampPositions& stamps) {
     for (uint8_t i = 0; i < dots.count; i++) {
         updateWanderingDot(dots.dots[i], stamps);
     }
@@ -281,7 +302,8 @@ int main() {
                 
                 // 单击：绘制stamp
                 if (stamps.count < MAX_STAMPS) {
-                    stamps.positions[stamps.count] = block_pos;
+                    stamps.positions[stamps.count].pos = block_pos;
+                    stamps.positions[stamps.count].hit_count = 0;  // 初始化碰撞计数
                     stamps.count++;
                     drawBlock(lcd, block_pos, true);
                     printf("mid(%d)\n", stamps.count);
