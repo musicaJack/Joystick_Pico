@@ -67,6 +67,16 @@ int determine_joystick_direction(int16_t x, int16_t y) {
     int16_t abs_x = abs(x);
     int16_t abs_y = abs(y);
     
+    // Use higher threshold to detect valid movement
+    if (abs_x < JOYSTICK_THRESHOLD && abs_y < JOYSTICK_THRESHOLD) {
+        return 0;
+    }
+    
+    // Introduce deadzone concept to reduce jitter
+    if (abs_x < JOYSTICK_THRESHOLD * 0.8 && abs_y < JOYSTICK_THRESHOLD * 0.8) {
+        return 0;
+    }
+    
     if (abs_y > abs_x * (JOYSTICK_DIRECTION_RATIO + 0.2)) {
         return (y < 0) ? DIRECTION_UP : DIRECTION_DOWN;
     }
@@ -75,7 +85,7 @@ int determine_joystick_direction(int16_t x, int16_t y) {
         return (x < 0) ? DIRECTION_LEFT : DIRECTION_RIGHT;
     }
     
-    return DIRECTION_CENTER;
+    return 0;  // Return 0 when direction is unclear
 }
 
 void loop() {
@@ -85,6 +95,8 @@ void loop() {
     static int previous_raw_direction = 0; // Previous direction for debouncing
     static uint8_t stable_count = 0; // Stability counter
     static uint8_t release_count = 0; // Release counter to confirm joystick returned to center
+    static bool button_debounced = false;  // 按钮防抖状态
+    static absolute_time_t last_button_press = 0;  // 上次按钮按下时间
     
     // Declare joystick-related variables
     uint16_t adc_x = 0, adc_y = 0;
@@ -107,7 +119,6 @@ void loop() {
     } 
     // Only detect joystick direction when button is not pressed
     else {
-        // Use stricter direction determination logic
         raw_direction = determine_joystick_direction(offset_x, offset_y);
     }
     
