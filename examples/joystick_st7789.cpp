@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <cstdlib>
+#include <random>
 #include "pico/stdlib.h"
 #include "joystick.hpp"
 #include "joystick/joystick_config.hpp"
@@ -14,10 +15,11 @@
 #define SCREEN_HEIGHT 320
 
 // 定义本次显示的颜色
-#define TEXT_COLOR st7789::WHITE
-#define BG_COLOR st7789::BLACK
-#define BLOCK_COLOR st7789::BLUE
-#define STAMP_COLOR st7789::RED  // 新增：盖章方块的颜色
+#define TEXT_COLOR st7789::WHITE  // 文字颜色(白色) 
+#define BG_COLOR st7789::BLACK     // 背景颜色(黑色)
+#define BLOCK_COLOR st7789::BLUE  // 方块颜色(蓝色)
+#define STAMP_COLOR st7789::RED  // 盖章方块的颜色(红色)
+#define DOT_COLOR st7789::GREEN  // 游走圆点的颜色(绿色)
 
 // 定义最大盖章数量
 #define MAX_STAMPS 50
@@ -26,6 +28,14 @@
 struct BlockPosition {
     int16_t x;
     int16_t y;
+};
+
+// 定义游走圆点结构
+struct WanderingDot {
+    BlockPosition pos;
+    int16_t speed_x;
+    int16_t speed_y;
+    bool active;
 };
 
 // 定义盖章位置数组
@@ -51,6 +61,61 @@ void drawAllStamps(st7789::ST7789& lcd, const StampPositions& stamps) {
     }
 }
 
+// 绘制圆点
+void drawDot(st7789::ST7789& lcd, const BlockPosition& pos) {
+    lcd.fillCircle(pos.x + BLOCK_SIZE/2, pos.y + BLOCK_SIZE/2, BLOCK_SIZE/2, DOT_COLOR);
+}
+
+// 清除圆点
+void clearDot(st7789::ST7789& lcd, const BlockPosition& pos) {
+    lcd.fillCircle(pos.x + BLOCK_SIZE/2, pos.y + BLOCK_SIZE/2, BLOCK_SIZE/2, BG_COLOR);
+}
+
+// 检查位置是否与任何stamp重叠
+bool isOverlappingWithStamps(const BlockPosition& pos, const StampPositions& stamps) {
+    for (uint8_t i = 0; i < stamps.count; i++) {
+        if (abs(pos.x - stamps.positions[i].x) < BLOCK_SIZE &&
+            abs(pos.y - stamps.positions[i].y) < BLOCK_SIZE) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// 更新游走圆点的位置
+void updateWanderingDot(WanderingDot& dot, const StampPositions& stamps) {
+    if (!dot.active) return;
+
+    // 保存旧位置
+    BlockPosition old_pos = dot.pos;
+    
+    // 更新位置
+    dot.pos.x += dot.speed_x;
+    dot.pos.y += dot.speed_y;
+    
+    // 边界检查和随机反弹
+    if (dot.pos.x < 0 || dot.pos.x > SCREEN_WIDTH - BLOCK_SIZE) {
+        dot.speed_x = -dot.speed_x;
+        dot.pos.x = (dot.pos.x < 0) ? 0 : SCREEN_WIDTH - BLOCK_SIZE;
+        // 添加随机Y方向速度变化
+        dot.speed_y = (rand() % 5) - 2;  // -2到2之间的随机数
+    }
+    if (dot.pos.y < 0 || dot.pos.y > SCREEN_HEIGHT - BLOCK_SIZE) {
+        dot.speed_y = -dot.speed_y;
+        dot.pos.y = (dot.pos.y < 0) ? 0 : SCREEN_HEIGHT - BLOCK_SIZE;
+        // 添加随机X方向速度变化
+        dot.speed_x = (rand() % 5) - 2;  // -2到2之间的随机数
+    }
+    
+    // 检查是否与stamp重叠
+    if (isOverlappingWithStamps(dot.pos, stamps)) {
+        // 如果重叠，随机改变方向
+        dot.speed_x = (rand() % 5) - 2;  // -2到2之间的随机数
+        dot.speed_y = (rand() % 5) - 2;  // -2到2之间的随机数
+        dot.pos = old_pos;
+    }
+}
+
 // 确定摇杆方向
 int determine_joystick_direction(int16_t x, int16_t y) {
     int16_t abs_x = abs(x);
@@ -70,6 +135,9 @@ int determine_joystick_direction(int16_t x, int16_t y) {
 int main() {
     stdio_init_all();
     printf("Joystick and ST7789 LCD Integration Demo\n");
+    
+    // 初始化随机数生成器
+    srand(to_ms_since_boot(get_absolute_time()));
     
     // 初始化显示屏
     st7789::ST7789 lcd;
@@ -137,27 +205,45 @@ int main() {
     static uint8_t stable_count = 0;
     static StampPositions stamps = {0};  // 初始化盖章位置数组
     
+    // 初始化游走圆点
+    WanderingDot wandering_dot = {
+        {0, 0},  // 初始位置（左上角）
+        2,       // 初始X速度
+        2,       // 初始Y速度
+        false    // 初始状态：未激活
+    };
+    
     // 主循环
     while (true) {
         // 检查MID按钮状态
-        if (joystick.get_button_value() == 0) {  // 0表示按下
-            if (!started) {
-                started = true;
-                // 立即清屏
-                lcd.clearScreen(BG_COLOR);
-                printf("Program started\n");
-            } else if (stamps.count < MAX_STAMPS) {  // 确保不超过最大盖章数量
-                // 保存当前方块位置
-                stamps.positions[stamps.count] = block_pos;
-                stamps.count++;
-                // 在保存的位置绘制一个永久红色方块（盖章）
-                drawBlock(lcd, block_pos, true);
-                // 打印盖章数量
-                printf("mid(%d)\n", stamps.count);
+        static uint32_t last_button_press_time = 0;
+        static bool first_press = true;
+        
+        if (joystick.get_button_value() == 0) {  // 按钮按下
+            uint32_t current_time = to_ms_since_boot(get_absolute_time());
+            
+            if (first_press) {
+                last_button_press_time = current_time;
+                first_press = false;
             } else {
-                printf("Reached maximum stamps limit (%d)\n", MAX_STAMPS);
+                // 检查是否在1秒内完成双击
+                if (current_time - last_button_press_time < 1000) {
+                    if (!wandering_dot.active) {
+                        wandering_dot.active = true;
+                        wandering_dot.pos = {0, 0};  // 重置到左上角
+                        wandering_dot.speed_x = (rand() % 5) - 2;  // 随机初始速度
+                        wandering_dot.speed_y = (rand() % 5) - 2;
+                        drawDot(lcd, wandering_dot.pos);
+                    }
+                }
+                first_press = true;
             }
             sleep_ms(200);  // 消抖
+        }
+
+        // 检查是否超过1秒没有第二次点击
+        if (!first_press && to_ms_since_boot(get_absolute_time()) - last_button_press_time > 1000) {
+            first_press = true;
         }
 
         // 读取摇杆数据
@@ -212,7 +298,17 @@ int main() {
                 drawAllStamps(lcd, stamps);
             }
         }
-        
+
+        // 更新和绘制游走圆点
+        if (wandering_dot.active) {
+            BlockPosition old_dot_pos = wandering_dot.pos;
+            updateWanderingDot(wandering_dot, stamps);
+            if (old_dot_pos.x != wandering_dot.pos.x || old_dot_pos.y != wandering_dot.pos.y) {
+                clearDot(lcd, old_dot_pos);
+                drawDot(lcd, wandering_dot.pos);
+            }
+        }
+
         sleep_ms(JOYSTICK_LOOP_DELAY_MS);
     }
     
