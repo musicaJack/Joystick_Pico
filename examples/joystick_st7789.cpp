@@ -123,19 +123,27 @@ void updateWanderingDot(WanderingDot& dot, const StampPositions& stamps) {
     // 边界检查和反弹
     if (dot.pos.x < 0 || dot.pos.x > SCREEN_WIDTH - BLOCK_SIZE) {
         dot.pos.x = (dot.pos.x < 0) ? 0 : SCREEN_WIDTH - BLOCK_SIZE;
-        generateRandomSpeed(dot);
+        dot.speed_x = -dot.speed_x;  // 反向速度
     }
     if (dot.pos.y < 0 || dot.pos.y > SCREEN_HEIGHT - BLOCK_SIZE) {
         dot.pos.y = (dot.pos.y < 0) ? 0 : SCREEN_HEIGHT - BLOCK_SIZE;
-        generateRandomSpeed(dot);
+        dot.speed_y = -dot.speed_y;  // 反向速度
     }
     
     // 检查是否与stamp重叠
     if (checkCollisionDirection(dot.pos, stamps) != 0) {
-        // 如果发生碰撞，立即生成新的随机速度
-        generateRandomSpeed(dot);
         // 回退到碰撞前的位置
         dot.pos = old_pos;
+        
+        // 生成新的随机速度，但保持一定的速度大小
+        do {
+            dot.speed_x = static_cast<int16_t>((rand() % 7) - 3);  // -3到3
+            dot.speed_y = static_cast<int16_t>((rand() % 7) - 3);  // -3到3
+        } while (abs(dot.speed_x) < 2 || abs(dot.speed_y) < 2);  // 确保速度足够大
+        
+        // 确保速度不会太小
+        if (abs(dot.speed_x) < 2) dot.speed_x = (dot.speed_x >= 0) ? 2 : -2;
+        if (abs(dot.speed_y) < 2) dot.speed_y = (dot.speed_y >= 0) ? 2 : -2;
     }
 }
 
@@ -287,7 +295,7 @@ int main() {
                 // 添加新的小球
                 if (wandering_dots.count < MAX_DOTS) {
                     WanderingDot new_dot = {
-                        {0, 0},  // 初始位置（左上角）
+                        {(SCREEN_WIDTH - BLOCK_SIZE) / 2, (SCREEN_HEIGHT - BLOCK_SIZE) / 2},  // 初始位置（屏幕中央）
                         static_cast<int16_t>((rand() % 5) - 2),  // 随机初始X速度
                         static_cast<int16_t>((rand() % 5) - 2),  // 随机初始Y速度
                         true     // 激活状态
