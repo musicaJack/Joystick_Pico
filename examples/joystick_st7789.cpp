@@ -125,7 +125,7 @@ void generateRandomSpeed(WanderingDot& dot) {
 }
 
 // 更新游走圆点的位置
-void updateWanderingDot(WanderingDot& dot, StampPositions& stamps) {
+void updateWanderingDot(WanderingDot& dot, StampPositions& stamps, st7789::ST7789& lcd) {
     if (!dot.active) return;
 
     // 保存旧位置
@@ -161,6 +161,8 @@ void updateWanderingDot(WanderingDot& dot, StampPositions& stamps) {
                 stamps.positions[hit_index] = stamps.positions[stamps.count - 1];
             }
             stamps.count--;
+            // 更新 stamps 显示
+            drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
         }
         
         // 生成新的随机速度，但保持一定的速度大小
@@ -176,9 +178,9 @@ void updateWanderingDot(WanderingDot& dot, StampPositions& stamps) {
 }
 
 // 更新所有小球的位置
-void updateAllDots(WanderingDots& dots, StampPositions& stamps) {
+void updateAllDots(WanderingDots& dots, StampPositions& stamps, st7789::ST7789& lcd) {
     for (uint8_t i = 0; i < dots.count; i++) {
-        updateWanderingDot(dots.dots[i], stamps);
+        updateWanderingDot(dots.dots[i], stamps, lcd);
     }
 }
 
@@ -255,6 +257,14 @@ bool isPositionOccupied(const BlockPosition& pos, const StampPositions& stamps) 
         }
     }
     return false;
+}
+
+// 检查位置是否在有效区域内（两条红线之间）
+bool isPositionInValidArea(const BlockPosition& pos) {
+    // 检查方块是否完全在两条红线之间
+    // 考虑方块的大小，确保整个方块都在有效区域内
+    return (pos.y + BLOCK_SIZE <= BOTTOM_LINE_Y) && 
+           (pos.y >= TOP_LINE_Y + LINE_WIDTH);
 }
 
 int main() {
@@ -369,8 +379,8 @@ int main() {
                 
                 // 单击：绘制stamp
                 if (stamps.count < MAX_STAMPS && (MAX_STAMPS - stamps.count) > 0) {
-                    // 检查位置是否已被占用
-                    if (!isPositionOccupied(block_pos, stamps)) {
+                    // 检查位置是否在有效区域内且未被占用
+                    if (isPositionInValidArea(block_pos) && !isPositionOccupied(block_pos, stamps)) {
                         stamps.positions[stamps.count].pos = block_pos;
                         stamps.positions[stamps.count].hit_count = 0;  // 初始化碰撞计数
                         stamps.count++;
@@ -378,7 +388,7 @@ int main() {
                         drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
                         printf("mid(%d)\n", stamps.count);
                     } else {
-                        printf("Position already occupied\n");
+                        printf("Position invalid or already occupied\n");
                     }
                 } else {
                     // 当 stamps 数量达到最大值时，让 stamps 显示闪烁三次
@@ -498,7 +508,7 @@ int main() {
 
         // 更新和绘制所有小球
         clearAllDots(lcd, wandering_dots);
-        updateAllDots(wandering_dots, stamps);
+        updateAllDots(wandering_dots, stamps, lcd);
         
         // 检查是否有小球碰到红线
         for (uint8_t i = 0; i < wandering_dots.count; i++) {
