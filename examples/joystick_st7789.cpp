@@ -14,15 +14,22 @@
 #define SCREEN_WIDTH 240
 #define SCREEN_HEIGHT 320
 
+// 定义红线相关常量
+#define LINE_WIDTH 5
+#define TOP_LINE_Y 20
+#define BOTTOM_LINE_Y (SCREEN_HEIGHT - 20 - LINE_WIDTH)
+#define LINE_COLOR st7789::BLUE
+
+// 定义游戏相关常量
+#define GAME_TIME 20  // 游戏时间（秒）
+#define MAX_STAMPS 50  // 最大盖章数量
+
 // 定义本次显示的颜色
 #define TEXT_COLOR st7789::WHITE  // 文字颜色(白色) 
 #define BG_COLOR st7789::BLACK     // 背景颜色(黑色)
 #define BLOCK_COLOR st7789::BLUE  // 方块颜色(蓝色)
 #define STAMP_COLOR st7789::RED  // 盖章方块的颜色(红色)
 #define DOT_COLOR st7789::GREEN  // 游走圆点的颜色(绿色)
-
-// 定义最大盖章数量
-#define MAX_STAMPS 50
 
 // 定义最大小球数量
 #define MAX_DOTS 10
@@ -209,6 +216,47 @@ int determine_joystick_direction(int16_t x, int16_t y) {
     return 0;  // center
 }
 
+// 绘制红线
+void drawLines(st7789::ST7789& lcd) {
+    // 绘制上方红线
+    lcd.fillRect(0, TOP_LINE_Y, SCREEN_WIDTH, LINE_WIDTH, LINE_COLOR);
+    
+    // 绘制下方红线
+    lcd.fillRect(0, BOTTOM_LINE_Y, SCREEN_WIDTH, LINE_WIDTH, LINE_COLOR);
+}
+
+// 检查小球是否碰到红线
+bool checkLineCollision(const BlockPosition& pos) {
+    int dot_center_y = pos.y + BLOCK_SIZE/2;
+    return (dot_center_y <= TOP_LINE_Y + LINE_WIDTH) || 
+           (dot_center_y >= BOTTOM_LINE_Y);
+}
+
+// 显示倒计时
+void drawCountdown(st7789::ST7789& lcd, int remaining_seconds) {
+    char time_str[10];
+    snprintf(time_str, sizeof(time_str), "Time: %02d", remaining_seconds);
+    lcd.drawString(2, 2, time_str, TEXT_COLOR, BG_COLOR, 2);
+}
+
+// 显示剩余方块数量
+void drawRemainingStamps(st7789::ST7789& lcd, int remaining) {
+    char stamps_str[20];
+    snprintf(stamps_str, sizeof(stamps_str), "Stamps: %02d", remaining);
+    lcd.drawString(2, SCREEN_HEIGHT - 20, stamps_str, TEXT_COLOR, BG_COLOR, 2);
+}
+
+// 检查位置是否已被占用
+bool isPositionOccupied(const BlockPosition& pos, const StampPositions& stamps) {
+    for (uint8_t i = 0; i < stamps.count; i++) {
+        if (abs(pos.x - stamps.positions[i].pos.x) < BLOCK_SIZE &&
+            abs(pos.y - stamps.positions[i].pos.y) < BLOCK_SIZE) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int main() {
     stdio_init_all();
     printf("Joystick and ST7789 LCD Integration Demo\n");
@@ -260,6 +308,8 @@ int main() {
             started = true;
             // 立即清屏
             lcd.clearScreen(BG_COLOR);
+            // 绘制红线
+            drawLines(lcd);
             sleep_ms(200);  // 消抖
         }
         sleep_ms(JOYSTICK_LOOP_DELAY_MS);
@@ -286,6 +336,11 @@ int main() {
     WanderingDots wandering_dots = {0};
     
     // 主循环
+    bool game_paused = false;
+    bool game_started = false;
+    uint32_t game_start_time = 0;
+    int remaining_seconds = GAME_TIME;
+    
     while (true) {
         // 检查MID按钮状态
         static uint32_t button_press_start_time = 0;
@@ -300,14 +355,41 @@ int main() {
                 button_press_start_time = current_time;
                 long_press_triggered = false;
                 
+                // 如果游戏暂停，再次按下中间键重新开始
+                if (game_paused) {
+                    game_paused = false;
+                    game_started = false;
+                    remaining_seconds = GAME_TIME;
+                    lcd.clearScreen(BG_COLOR);
+                    drawLines(lcd);
+                    drawAllStamps(lcd, stamps);
+                    drawAllDots(lcd, wandering_dots);
+                    continue;
+                }
+                
                 // 单击：绘制stamp
-                if (stamps.count < MAX_STAMPS) {
-                    stamps.positions[stamps.count].pos = block_pos;
-                    stamps.positions[stamps.count].hit_count = 0;  // 初始化碰撞计数
-                    stamps.count++;
-                    drawBlock(lcd, block_pos, true);
-                    printf("mid(%d)\n", stamps.count);
+                if (stamps.count < MAX_STAMPS && (MAX_STAMPS - stamps.count) > 0) {
+                    // 检查位置是否已被占用
+                    if (!isPositionOccupied(block_pos, stamps)) {
+                        stamps.positions[stamps.count].pos = block_pos;
+                        stamps.positions[stamps.count].hit_count = 0;  // 初始化碰撞计数
+                        stamps.count++;
+                        drawBlock(lcd, block_pos, true);
+                        drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
+                        printf("mid(%d)\n", stamps.count);
+                    } else {
+                        printf("Position already occupied\n");
+                    }
                 } else {
+                    // 当 stamps 数量达到最大值时，让 stamps 显示闪烁三次
+                    for (int i = 0; i < 3; i++) {
+                        // 清除显示
+                        lcd.fillRect(2, SCREEN_HEIGHT - 20, 120, 20, BG_COLOR);
+                        sleep_ms(200);
+                        // 重新显示
+                        drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
+                        sleep_ms(200);
+                    }
                     printf("Reached maximum stamps limit (%d)\n", MAX_STAMPS);
                 }
             } else if (!long_press_triggered && (current_time - button_press_start_time >= 3000)) {
@@ -325,11 +407,38 @@ int main() {
                     wandering_dots.dots[wandering_dots.count] = new_dot;
                     wandering_dots.count++;
                     drawDot(lcd, new_dot.pos);
+                    
+                    // 如果是第一个球，开始计时
+                    if (!game_started) {
+                        game_started = true;
+                        game_start_time = current_time;
+                    }
                 }
             }
         } else {
             button_pressed = false;
             long_press_triggered = false;
+        }
+
+        // 如果游戏暂停，跳过更新
+        if (game_paused) {
+            sleep_ms(JOYSTICK_LOOP_DELAY_MS);
+            continue;
+        }
+
+        // 更新倒计时
+        if (game_started) {
+            uint32_t current_time = to_ms_since_boot(get_absolute_time());
+            int elapsed_seconds = (current_time - game_start_time) / 1000;
+            remaining_seconds = GAME_TIME - elapsed_seconds;
+            
+            if (remaining_seconds <= 0) {
+                game_paused = true;
+                lcd.drawString(SCREEN_WIDTH/2 - 40, SCREEN_HEIGHT/2, "You Win!", TEXT_COLOR, BG_COLOR, 2);
+                continue;
+            }
+            
+            drawCountdown(lcd, remaining_seconds);
         }
 
         // 读取摇杆数据
@@ -382,12 +491,24 @@ int main() {
                 drawBlock(lcd, block_pos, false);
                 // 重新绘制所有盖章方块
                 drawAllStamps(lcd, stamps);
+                // 重新绘制红线
+                drawLines(lcd);
             }
         }
 
         // 更新和绘制所有小球
         clearAllDots(lcd, wandering_dots);
         updateAllDots(wandering_dots, stamps);
+        
+        // 检查是否有小球碰到红线
+        for (uint8_t i = 0; i < wandering_dots.count; i++) {
+            if (wandering_dots.dots[i].active && checkLineCollision(wandering_dots.dots[i].pos)) {
+                game_paused = true;
+                lcd.drawString(SCREEN_WIDTH/2 - 40, SCREEN_HEIGHT/2, "You Lost!", TEXT_COLOR, BG_COLOR, 2);
+                break;
+            }
+        }
+        
         drawAllDots(lcd, wandering_dots);
 
         sleep_ms(JOYSTICK_LOOP_DELAY_MS);
