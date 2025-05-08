@@ -10,29 +10,65 @@ set(CMAKE_CXX_STANDARD 17)
 # Initialize the SDK
 pico_sdk_init()
 
-# --- Your Project Configuration ---
-set(PROJECT_NAME pico_joystick_example)
-# --------------------------------
-
 # Add include directories
-include_directories(include)
-
-# Add source files
-add_executable(${PROJECT_NAME}
-    src/main.cpp
-    src/joystick.cpp 
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/joystick
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/st7789
+    ${PICO_SDK_PATH}/src/common/pico_stdlib/include
+    ${PICO_SDK_PATH}/src/rp2_common/hardware_spi/include
+    ${PICO_SDK_PATH}/src/rp2_common/hardware_i2c/include
+    ${PICO_SDK_PATH}/src/rp2_common/hardware_dma/include
 )
 
-# Link necessary Pico libraries
-target_link_libraries(${PROJECT_NAME}
+# Common source files
+set(COMMON_SOURCES
+    src/joystick/joystick.cpp
+)
+
+# ST7789 source files
+set(ST7789_SOURCES
+    src/st7789/st7789.cpp
+    src/st7789/st7789_hal.cpp
+    src/st7789/st7789_gfx.cpp
+    src/st7789/st7789_font.cpp
+)
+
+# Joystick test executable
+add_executable(joystick_test
+    examples/joystick_test.cpp
+    ${COMMON_SOURCES}
+)
+
+# Joystick ST7789 integration executable
+add_executable(joystick_st7789
+    examples/joystick_st7789.cpp
+    ${COMMON_SOURCES}
+    ${ST7789_SOURCES}
+)
+
+# Link libraries for joystick_test
+target_link_libraries(joystick_test
     pico_stdlib
     hardware_i2c
 )
 
-# Enable USB stdio for printf output
-pico_enable_stdio_usb(${PROJECT_NAME} 1)
-# Alternatively, enable UART stdio (choose one)
-pico_enable_stdio_uart(${PROJECT_NAME} 0)
+# Link libraries for joystick_st7789
+target_link_libraries(joystick_st7789
+    pico_stdlib
+    hardware_i2c
+    hardware_spi
+    hardware_dma
+)
+
+# Enable USB stdio for both executables
+pico_enable_stdio_usb(joystick_test 1)
+pico_enable_stdio_usb(joystick_st7789 1)
+
+# Disable UART stdio for both executables
+pico_enable_stdio_uart(joystick_test 0)
+pico_enable_stdio_uart(joystick_st7789 0)
 
 # Add other build options if needed (e.g., UF2 generation)
-pico_add_extra_outputs(${PROJECT_NAME}) 
+pico_add_extra_outputs(joystick_test)
+pico_add_extra_outputs(joystick_st7789)
