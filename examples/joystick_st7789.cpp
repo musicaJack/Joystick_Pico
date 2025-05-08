@@ -24,6 +24,9 @@
 // 定义最大盖章数量
 #define MAX_STAMPS 50
 
+// 定义最大小球数量
+#define MAX_DOTS 10
+
 // 定义方块位置结构
 struct BlockPosition {
     int16_t x;
@@ -36,6 +39,12 @@ struct WanderingDot {
     int16_t speed_x;
     int16_t speed_y;
     bool active;
+};
+
+// 定义小球数组
+struct WanderingDots {
+    WanderingDot dots[MAX_DOTS];
+    uint8_t count;
 };
 
 // 定义盖章位置数组
@@ -71,15 +80,33 @@ void clearDot(st7789::ST7789& lcd, const BlockPosition& pos) {
     lcd.fillCircle(pos.x + BLOCK_SIZE/2, pos.y + BLOCK_SIZE/2, BLOCK_SIZE/2, BG_COLOR);
 }
 
-// 检查位置是否与任何stamp重叠
-bool isOverlappingWithStamps(const BlockPosition& pos, const StampPositions& stamps) {
+// 检查位置是否与任何stamp重叠，并返回碰撞方向
+int checkCollisionDirection(const BlockPosition& pos, const StampPositions& stamps) {
     for (uint8_t i = 0; i < stamps.count; i++) {
         if (abs(pos.x - stamps.positions[i].x) < BLOCK_SIZE &&
             abs(pos.y - stamps.positions[i].y) < BLOCK_SIZE) {
-            return true;
+            // 计算碰撞方向
+            int dx = pos.x - stamps.positions[i].x;
+            int dy = pos.y - stamps.positions[i].y;
+            
+            // 确定主要碰撞方向
+            if (abs(dx) > abs(dy)) {
+                return (dx > 0) ? 1 : 2;  // 1=右碰撞, 2=左碰撞
+            } else {
+                return (dy > 0) ? 3 : 4;  // 3=下碰撞, 4=上碰撞
+            }
         }
     }
-    return false;
+    return 0;  // 无碰撞
+}
+
+// 生成随机速度
+void generateRandomSpeed(WanderingDot& dot) {
+    // 生成-3到3之间的随机速度，但确保不会太慢
+    do {
+        dot.speed_x = static_cast<int16_t>((rand() % 7) - 3);  // -3到3
+        dot.speed_y = static_cast<int16_t>((rand() % 7) - 3);  // -3到3
+    } while (abs(dot.speed_x) < 2 && abs(dot.speed_y) < 2);  // 确保至少一个方向的速度足够大
 }
 
 // 更新游走圆点的位置
@@ -93,26 +120,47 @@ void updateWanderingDot(WanderingDot& dot, const StampPositions& stamps) {
     dot.pos.x += dot.speed_x;
     dot.pos.y += dot.speed_y;
     
-    // 边界检查和随机反弹
+    // 边界检查和反弹
     if (dot.pos.x < 0 || dot.pos.x > SCREEN_WIDTH - BLOCK_SIZE) {
-        dot.speed_x = -dot.speed_x;
         dot.pos.x = (dot.pos.x < 0) ? 0 : SCREEN_WIDTH - BLOCK_SIZE;
-        // 添加随机Y方向速度变化
-        dot.speed_y = (rand() % 5) - 2;  // -2到2之间的随机数
+        generateRandomSpeed(dot);
     }
     if (dot.pos.y < 0 || dot.pos.y > SCREEN_HEIGHT - BLOCK_SIZE) {
-        dot.speed_y = -dot.speed_y;
         dot.pos.y = (dot.pos.y < 0) ? 0 : SCREEN_HEIGHT - BLOCK_SIZE;
-        // 添加随机X方向速度变化
-        dot.speed_x = (rand() % 5) - 2;  // -2到2之间的随机数
+        generateRandomSpeed(dot);
     }
     
     // 检查是否与stamp重叠
-    if (isOverlappingWithStamps(dot.pos, stamps)) {
-        // 如果重叠，随机改变方向
-        dot.speed_x = (rand() % 5) - 2;  // -2到2之间的随机数
-        dot.speed_y = (rand() % 5) - 2;  // -2到2之间的随机数
+    if (checkCollisionDirection(dot.pos, stamps) != 0) {
+        // 如果发生碰撞，立即生成新的随机速度
+        generateRandomSpeed(dot);
+        // 回退到碰撞前的位置
         dot.pos = old_pos;
+    }
+}
+
+// 更新所有小球的位置
+void updateAllDots(WanderingDots& dots, const StampPositions& stamps) {
+    for (uint8_t i = 0; i < dots.count; i++) {
+        updateWanderingDot(dots.dots[i], stamps);
+    }
+}
+
+// 绘制所有小球
+void drawAllDots(st7789::ST7789& lcd, const WanderingDots& dots) {
+    for (uint8_t i = 0; i < dots.count; i++) {
+        if (dots.dots[i].active) {
+            drawDot(lcd, dots.dots[i].pos);
+        }
+    }
+}
+
+// 清除所有小球
+void clearAllDots(st7789::ST7789& lcd, const WanderingDots& dots) {
+    for (uint8_t i = 0; i < dots.count; i++) {
+        if (dots.dots[i].active) {
+            clearDot(lcd, dots.dots[i].pos);
+        }
     }
 }
 
@@ -205,45 +253,53 @@ int main() {
     static uint8_t stable_count = 0;
     static StampPositions stamps = {0};  // 初始化盖章位置数组
     
-    // 初始化游走圆点
-    WanderingDot wandering_dot = {
-        {0, 0},  // 初始位置（左上角）
-        2,       // 初始X速度
-        2,       // 初始Y速度
-        false    // 初始状态：未激活
-    };
+    // 初始化小球数组
+    WanderingDots wandering_dots = {0};
     
     // 主循环
     while (true) {
         // 检查MID按钮状态
-        static uint32_t last_button_press_time = 0;
-        static bool first_press = true;
+        static uint32_t button_press_start_time = 0;
+        static bool button_pressed = false;
+        static bool long_press_triggered = false;
         
         if (joystick.get_button_value() == 0) {  // 按钮按下
             uint32_t current_time = to_ms_since_boot(get_absolute_time());
             
-            if (first_press) {
-                last_button_press_time = current_time;
-                first_press = false;
-            } else {
-                // 检查是否在1秒内完成双击
-                if (current_time - last_button_press_time < 1000) {
-                    if (!wandering_dot.active) {
-                        wandering_dot.active = true;
-                        wandering_dot.pos = {0, 0};  // 重置到左上角
-                        wandering_dot.speed_x = (rand() % 5) - 2;  // 随机初始速度
-                        wandering_dot.speed_y = (rand() % 5) - 2;
-                        drawDot(lcd, wandering_dot.pos);
-                    }
+            if (!button_pressed) {  // 按钮刚被按下
+                button_pressed = true;
+                button_press_start_time = current_time;
+                long_press_triggered = false;
+                
+                // 单击：绘制stamp
+                if (stamps.count < MAX_STAMPS) {
+                    stamps.positions[stamps.count] = block_pos;
+                    stamps.count++;
+                    drawBlock(lcd, block_pos, true);
+                    printf("mid(%d)\n", stamps.count);
+                } else {
+                    printf("Reached maximum stamps limit (%d)\n", MAX_STAMPS);
                 }
-                first_press = true;
+            } else if (!long_press_triggered && (current_time - button_press_start_time >= 3000)) {
+                // 长按3秒触发
+                long_press_triggered = true;
+                
+                // 添加新的小球
+                if (wandering_dots.count < MAX_DOTS) {
+                    WanderingDot new_dot = {
+                        {0, 0},  // 初始位置（左上角）
+                        static_cast<int16_t>((rand() % 5) - 2),  // 随机初始X速度
+                        static_cast<int16_t>((rand() % 5) - 2),  // 随机初始Y速度
+                        true     // 激活状态
+                    };
+                    wandering_dots.dots[wandering_dots.count] = new_dot;
+                    wandering_dots.count++;
+                    drawDot(lcd, new_dot.pos);
+                }
             }
-            sleep_ms(200);  // 消抖
-        }
-
-        // 检查是否超过1秒没有第二次点击
-        if (!first_press && to_ms_since_boot(get_absolute_time()) - last_button_press_time > 1000) {
-            first_press = true;
+        } else {
+            button_pressed = false;
+            long_press_triggered = false;
         }
 
         // 读取摇杆数据
@@ -299,15 +355,10 @@ int main() {
             }
         }
 
-        // 更新和绘制游走圆点
-        if (wandering_dot.active) {
-            BlockPosition old_dot_pos = wandering_dot.pos;
-            updateWanderingDot(wandering_dot, stamps);
-            if (old_dot_pos.x != wandering_dot.pos.x || old_dot_pos.y != wandering_dot.pos.y) {
-                clearDot(lcd, old_dot_pos);
-                drawDot(lcd, wandering_dot.pos);
-            }
-        }
+        // 更新和绘制所有小球
+        clearAllDots(lcd, wandering_dots);
+        updateAllDots(wandering_dots, stamps);
+        drawAllDots(lcd, wandering_dots);
 
         sleep_ms(JOYSTICK_LOOP_DELAY_MS);
     }
