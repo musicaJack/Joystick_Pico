@@ -30,6 +30,7 @@
 #define BLOCK_COLOR st7789::BLUE  // 方块颜色(蓝色)
 #define STAMP_COLOR st7789::RED  // 盖章方块的颜色(红色)
 #define DOT_COLOR st7789::GREEN  // 游走圆点的颜色(绿色)
+#define YELLOW_DOT_COLOR st7789::CYAN  // 小黄球的颜色(黄色)
 
 // 定义最大小球数量
 #define MAX_DOTS 10
@@ -46,6 +47,7 @@ struct WanderingDot {
     int16_t speed_x;
     int16_t speed_y;
     bool active;
+    bool is_yellow;  // 是否为小黄球
 };
 
 // 定义小球数组
@@ -87,8 +89,8 @@ void drawAllStamps(st7789::ST7789& lcd, const StampPositions& stamps) {
 }
 
 // 绘制圆点
-void drawDot(st7789::ST7789& lcd, const BlockPosition& pos) {
-    lcd.fillCircle(pos.x + BLOCK_SIZE/2, pos.y + BLOCK_SIZE/2, BLOCK_SIZE/2, DOT_COLOR);
+void drawDot(st7789::ST7789& lcd, const BlockPosition& pos, bool is_yellow = false) {
+    lcd.fillCircle(pos.x + BLOCK_SIZE/2, pos.y + BLOCK_SIZE/2, BLOCK_SIZE/2, is_yellow ? YELLOW_DOT_COLOR : DOT_COLOR);
 }
 
 // 清除圆点
@@ -154,11 +156,8 @@ void updateWanderingDot(WanderingDot& dot, StampPositions& stamps, st7789::ST778
         // 回退到碰撞前的位置
         dot.pos = old_pos;
         
-        // 增加碰撞计数
-        stamps.positions[hit_index].hit_count++;
-        
-        // 如果碰撞次数达到2次，移除该方块
-        if (stamps.positions[hit_index].hit_count >= 2) {
+        // 如果是小黄球，直接移除方块
+        if (dot.is_yellow) {
             // 将最后一个方块移到当前位置
             if (hit_index < stamps.count - 1) {
                 stamps.positions[hit_index] = stamps.positions[stamps.count - 1];
@@ -166,6 +165,20 @@ void updateWanderingDot(WanderingDot& dot, StampPositions& stamps, st7789::ST778
             stamps.count--;
             // 更新 stamps 显示
             drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
+        } else {
+            // 增加碰撞计数
+            stamps.positions[hit_index].hit_count++;
+            
+            // 如果碰撞次数达到2次，移除该方块
+            if (stamps.positions[hit_index].hit_count >= 2) {
+                // 将最后一个方块移到当前位置
+                if (hit_index < stamps.count - 1) {
+                    stamps.positions[hit_index] = stamps.positions[stamps.count - 1];
+                }
+                stamps.count--;
+                // 更新 stamps 显示
+                drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
+            }
         }
         
         // 生成新的随机速度，但保持一定的速度大小
@@ -191,7 +204,7 @@ void updateAllDots(WanderingDots& dots, StampPositions& stamps, st7789::ST7789& 
 void drawAllDots(st7789::ST7789& lcd, const WanderingDots& dots) {
     for (uint8_t i = 0; i < dots.count; i++) {
         if (dots.dots[i].active) {
-            drawDot(lcd, dots.dots[i].pos);
+            drawDot(lcd, dots.dots[i].pos, dots.dots[i].is_yellow);
         }
     }
 }
@@ -411,15 +424,19 @@ int main() {
                 
                 // 添加新的小球
                 if (wandering_dots.count < MAX_DOTS) {
+                    // 随机决定生成小绿球还是小黄球
+                    bool is_yellow = (rand() % 2) == 0;  // 50%概率生成小黄球
+                    
                     WanderingDot new_dot = {
                         {(SCREEN_WIDTH - BLOCK_SIZE) / 2, (SCREEN_HEIGHT - BLOCK_SIZE) / 2},  // 初始位置（屏幕中央）
                         static_cast<int16_t>((rand() % 5) - 2),  // 随机初始X速度
                         static_cast<int16_t>((rand() % 5) - 2),  // 随机初始Y速度
-                        true     // 激活状态
+                        true,     // 激活状态
+                        is_yellow // 是否为小黄球
                     };
                     wandering_dots.dots[wandering_dots.count] = new_dot;
                     wandering_dots.count++;
-                    drawDot(lcd, new_dot.pos);
+                    drawDot(lcd, new_dot.pos, is_yellow);
                     
                     // 如果是第一个球，开始计时
                     if (!game_started) {
@@ -448,6 +465,16 @@ int main() {
             if (remaining_seconds <= 0) {
                 game_paused = true;
                 lcd.drawString(SCREEN_WIDTH/2 - 40, SCREEN_HEIGHT/2, "You Win!", TEXT_COLOR, BG_COLOR, 2);
+                // 等待5秒后重新开始
+                sleep_ms(5000);
+                // 重置游戏状态
+                game_paused = false;
+                game_started = false;
+                remaining_seconds = GAME_TIME;
+                stamps.count = 0;  // 清空所有方块
+                wandering_dots.count = 0;  // 清空所有小球
+                lcd.clearScreen(BG_COLOR);
+                drawLines(lcd);
                 continue;
             }
             
@@ -518,6 +545,16 @@ int main() {
             if (wandering_dots.dots[i].active && checkLineCollision(wandering_dots.dots[i].pos)) {
                 game_paused = true;
                 lcd.drawString(SCREEN_WIDTH/2 - 40, SCREEN_HEIGHT/2, "You Lost!", TEXT_COLOR, BG_COLOR, 2);
+                // 等待5秒后重新开始
+                sleep_ms(5000);
+                // 重置游戏状态
+                game_paused = false;
+                game_started = false;
+                remaining_seconds = GAME_TIME;
+                stamps.count = 0;  // 清空所有方块
+                wandering_dots.count = 0;  // 清空所有小球
+                lcd.clearScreen(BG_COLOR);
+                drawLines(lcd);
                 break;
             }
         }
