@@ -1,55 +1,61 @@
 # Joystick_Pico Driver
 
-这是一个用于树莓派 Pico 平台的摇杆模块和 ST7789 显示屏驱动程序。该驱动提供了完整的摇杆控制、按钮检测、方向识别、RGB 状态指示以及显示屏支持。
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20Pico-brightgreen.svg)
+![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)
 
-## 功能特点
+English | [中文](README.zh.md)
 
-### 摇杆模块
-- I2C 通信（默认 100kHz，可配置）
-- 12位和 8位 ADC 值读取
-- 增强的方向检测（上、下、左、右、中心）
-- 高级去抖动和稳定性算法
-- 按钮状态检测
-- RGB LED 状态指示
-- 校准功能
-- 完整的错误处理
-- 方向稳定性增强
+This is a driver for the Raspberry Pi Pico platform that supports both joystick module and ST7789 display. The driver provides comprehensive joystick control, button detection, direction recognition, RGB status indication, and display support.
 
-### ST7789 显示屏
-- SPI 通信接口
-- 支持多种分辨率
-- 内置显示缓冲区
-- 支持基本图形绘制
-- 支持文本显示
-- 支持图片显示
+## Features
 
-## 硬件要求
+### Joystick Module
+- I2C communication (default 100kHz, configurable)
+- 12-bit and 8-bit ADC value reading
+- Enhanced direction detection (up, down, left, right, center)
+- Advanced debouncing and stability algorithms
+- Button state detection
+- RGB LED status indication
+- Calibration capabilities
+- Complete error handling
+- Direction stability enhancements
 
-- 树莓派 Pico
-- 摇杆模块（I2C 接口）
-- ST7789 显示屏（可选）
-- 连接线（SDA、SCL、VCC、GND）
+### ST7789 Display
+- SPI communication interface
+- Support for multiple resolutions
+- Built-in display buffer
+- Basic graphics drawing support
+- Text display support
+- Image display support
 
-## 引脚连接
+## Hardware Requirements
 
-### 摇杆模块
-| Pico 引脚 | 摇杆引脚 | 描述 |
-|----------|----------|------|
-| GPIO6    | SDA      | I2C 数据线 |
-| GPIO7    | SCL      | I2C 时钟线 |
-| 3V3      | VCC      | 电源正极 |
-| GND      | GND      | 电源负极 |
+- Raspberry Pi Pico
+- Joystick module (I2C interface)
+- ST7789 display (optional)
+- Connection cables (SDA, SCL, VCC, GND)
 
-### ST7789 显示屏
-| Pico 引脚 | 显示屏引脚 | 描述 |
-|----------|------------|------|
-| GPIO16   | SCLK      | SPI 时钟线 |
-| GPIO17   | MOSI      | SPI 数据线 |
-| GPIO18   | CS        | 片选信号 |
-| GPIO19   | DC        | 数据/命令选择 |
-| GPIO20   | RST       | 复位信号 |
-| 3V3      | VCC       | 电源正极 |
-| GND      | GND       | 电源负极 |
+## Pin Connections
+
+### Joystick Module
+| Pico Pin | Joystick Pin | Description |
+|----------|--------------|-------------|
+| GPIO6    | SDA          | I2C data line |
+| GPIO7    | SCL          | I2C clock line |
+| 3V3      | VCC          | Power positive |
+| GND      | GND          | Power negative |
+
+### ST7789 Display
+| Pico Pin | Display Pin | Description |
+|----------|-------------|-------------|
+| GPIO16   | SCLK        | SPI clock line |
+| GPIO17   | MOSI        | SPI data line |
+| GPIO18   | CS          | Chip select |
+| GPIO19   | DC          | Data/Command select |
+| GPIO20   | RST         | Reset signal |
+| 3V3      | VCC         | Power positive |
+| GND      | GND         | Power negative |
 
 ## Quick Start
 
@@ -181,16 +187,99 @@ Key parameters in `main.cpp`:
 2. Run the `build_pico.bat` script to build
 3. Copy the generated `.uf2` file to the Pico when in BOOTSEL mode
 
+## Example Code
+
+The project provides two main examples demonstrating different use cases:
+
+### 1. Basic Joystick Test Example (`examples/joystick_test.cpp`)
+
+This example demonstrates the basic functionality of the joystick, including:
+- Direction detection (up, down, left, right, center)
+- Button state detection
+- LED status indication
+- Advanced debouncing algorithm
+
+Key features:
+- Uses enhanced direction detection algorithm for improved stability
+- Implements intelligent debouncing mechanism
+- Supports continuous operation and immediate response
+- Indicates operation state through LED
+
+### 2. Joystick with Display Integration Example (`examples/joystick_st7789.cpp`)
+
+This example implements an interesting physics-based collision game, demonstrating how to integrate the joystick with the ST7789 display.
+
+#### Game Rules
+
+1. **Game Objective**:
+   - Eliminate as many red blocks as possible within the time limit (20 seconds)
+   - Control the green dot using the joystick
+   - Eliminate red blocks through collisions
+
+2. **Game Elements**:
+   - Green dot: Player-controlled character
+   - Red blocks: Targets to be eliminated
+   - Blue lines: Upper and lower boundaries
+   - Timer: Shows remaining time
+   - Remaining blocks counter: Shows number of blocks to be eliminated
+
+3. **Game Mechanics**:
+   - Each red block requires two collisions to disappear
+   - Dots bounce off boundaries
+   - Dots change direction when hitting red blocks
+   - Final score is displayed when time runs out
+
+4. **Control Method**:
+   - Use joystick to control the green dot's movement
+   - Joystick direction determines dot's movement direction
+   - Joystick movement amplitude determines dot's speed
+
+5. **Scoring Rules**:
+   - 1 point for each eliminated red block
+   - Final score = Number of eliminated blocks
+
+#### Technical Implementation
+
+1. **Physics System**:
+   - Implements basic physics collision detection
+   - Supports multiple dots moving simultaneously
+   - Implements boundary collision and bounce effects
+
+2. **Display System**:
+   - Real-time game screen updates
+   - Displays timer and score
+   - Supports dynamic graphics drawing
+
+3. **Control System**:
+   - Precise control using joystick
+   - Implements smooth movement control
+   - Supports multi-directional simultaneous input
+
+4. **Game State Management**:
+   - Tracks state of all game elements
+   - Manages collision detection and response
+   - Handles game start and end logic
+
+### Example Program Feature Comparison
+
+| Feature | Basic Test Example | Display Integration Example |
+|---------|-------------------|----------------------------|
+| Direction Detection | ✓ | ✓ |
+| Button Detection | ✓ | ✓ |
+| LED Indication | ✓ | - |
+| Display Support | - | ✓ |
+| Physics Simulation | - | ✓ |
+| Collision Detection | - | ✓ |
+| Game Logic | - | ✓ |
+| Real-time Display | - | ✓ |
+
 ## Notes
 
-1. The green LED flash indicates successful initialization
+1. Green LED flash indicates successful initialization
 2. Blue LED shows active operation, automatically turning off upon release
 3. Configure parameters for your specific hardware sensitivity
 4. The debouncing algorithm balances responsiveness with stability
-
-## Example Code
-
-A complete example is provided in `src/main.cpp` demonstrating initialization, continuous polling, and enhanced direction detection with debouncing.
+5. Ensure adequate power supply when using the display
 
 ## License
 
@@ -199,62 +288,3 @@ MIT License
 ## Contributions
 
 Issues and Pull Requests are welcome to improve this project. 
-
-## 示例代码
-
-项目提供了两个主要示例：
-
-1. `examples/joystick_test.cpp` - 基础摇杆测试示例
-2. `examples/joystick_st7789.cpp` - 摇杆与显示屏集成示例
-
-### 基础摇杆示例
-```cpp
-#include "joystick.hpp"
-Joystick joystick;
-
-int main() {
-    // 初始化摇杆
-    joystick.begin(i2c1, 0x63, 6, 7);
-    
-    while (true) {
-        // 读取摇杆数据
-        uint16_t adc_x, adc_y;
-        joystick.get_joy_adc_16bits_value_xy(&adc_x, &adc_y);
-        
-        // 读取按钮状态
-        uint8_t button = joystick.get_button_value();
-        
-        sleep_ms(20);
-    }
-}
-```
-
-### 摇杆与显示屏集成示例
-```cpp
-#include "joystick.hpp"
-#include "st7789.hpp"
-
-Joystick joystick;
-ST7789 display;
-
-int main() {
-    // 初始化摇杆
-    joystick.begin(i2c1, 0x63, 6, 7);
-    
-    // 初始化显示屏
-    display.begin(16, 17, 18, 19, 20);
-    
-    while (true) {
-        // 读取摇杆数据并在显示屏上显示
-        uint16_t adc_x, adc_y;
-        joystick.get_joy_adc_16bits_value_xy(&adc_x, &adc_y);
-        
-        // 在显示屏上绘制摇杆位置
-        display.clear();
-        display.draw_circle(adc_x/256, adc_y/256, 5, 0xFFFF);
-        display.update();
-        
-        sleep_ms(20);
-    }
-}
-``` 
