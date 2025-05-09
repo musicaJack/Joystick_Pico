@@ -229,14 +229,10 @@ This example implements an interesting physics-based collision game, demonstrati
    - Game time is 20 seconds
    - Victory is achieved if the green ball survives without hitting boundaries within 20 seconds
 
-4. **Control Method**:
-   - Use joystick to control the green dot's movement
-   - Joystick direction determines dot's movement direction
-   - Joystick movement amplitude determines dot's speed
+4. **​Control Scheme**:
+   - ​Long-press​​ the joystick's ​​middle button (MID)​​ for 3 seconds then release to deploy the ball
+   - Use the joystick to ​​place blocks​
 
-5. **Scoring Rules**:
-   - 1 point for each eliminated red block
-   - Final score = Number of eliminated blocks
 
 #### Technical Implementation
 
