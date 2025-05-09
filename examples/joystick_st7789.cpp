@@ -29,6 +29,7 @@
 #define BG_COLOR st7789::BLACK     // 背景颜色(黑色)
 #define BLOCK_COLOR st7789::BLUE  // 方块颜色(蓝色)
 #define STAMP_COLOR st7789::RED  // 盖章方块的颜色(红色)
+#define IRON_BLOCK_COLOR st7789::GRAY  // 铁方块的颜色(铁灰色)
 #define DOT_COLOR st7789::GREEN  // 游走圆点的颜色(绿色)
 #define YELLOW_DOT_COLOR st7789::CYAN  // 小黄球的颜色(黄色)
 
@@ -60,6 +61,7 @@ struct WanderingDots {
 struct StampPosition {
     BlockPosition pos;
     uint8_t hit_count;  // 碰撞次数
+    bool is_iron;      // 是否为铁方块
 };
 
 // 定义盖章位置数组
@@ -72,8 +74,12 @@ struct StampPositions {
 void drawRemainingStamps(st7789::ST7789& lcd, int remaining);
 
 // 绘制方块
-void drawBlock(st7789::ST7789& lcd, const BlockPosition& pos, bool is_stamp = false) {
-    lcd.fillRect(pos.x, pos.y, BLOCK_SIZE, BLOCK_SIZE, is_stamp ? STAMP_COLOR : BLOCK_COLOR);
+void drawBlock(st7789::ST7789& lcd, const BlockPosition& pos, bool is_stamp = false, bool is_iron = false) {
+    if (is_iron) {
+        lcd.fillRect(pos.x, pos.y, BLOCK_SIZE, BLOCK_SIZE, IRON_BLOCK_COLOR);
+    } else {
+        lcd.fillRect(pos.x, pos.y, BLOCK_SIZE, BLOCK_SIZE, is_stamp ? STAMP_COLOR : BLOCK_COLOR);
+    }
 }
 
 // 清除方块
@@ -84,7 +90,7 @@ void clearBlock(st7789::ST7789& lcd, const BlockPosition& pos) {
 // 绘制所有盖章方块
 void drawAllStamps(st7789::ST7789& lcd, const StampPositions& stamps) {
     for (uint8_t i = 0; i < stamps.count; i++) {
-        drawBlock(lcd, stamps.positions[i].pos, true);
+        drawBlock(lcd, stamps.positions[i].pos, true, stamps.positions[i].is_iron);
     }
 }
 
@@ -158,19 +164,19 @@ void updateWanderingDot(WanderingDot& dot, StampPositions& stamps, st7789::ST778
         
         // 如果是小黄球，直接移除方块
         if (dot.is_yellow) {
-            // 将最后一个方块移到当前位置
-            if (hit_index < stamps.count - 1) {
-                stamps.positions[hit_index] = stamps.positions[stamps.count - 1];
-            }
-            stamps.count--;
-            // 更新 stamps 显示
-            drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
-        } else {
-            // 增加碰撞计数
-            stamps.positions[hit_index].hit_count++;
-            
-            // 如果碰撞次数达到2次，移除该方块
-            if (stamps.positions[hit_index].hit_count >= 2) {
+            // 如果是铁方块，需要6次碰撞
+            if (stamps.positions[hit_index].is_iron) {
+                stamps.positions[hit_index].hit_count++;
+                if (stamps.positions[hit_index].hit_count >= 6) {
+                    // 将最后一个方块移到当前位置
+                    if (hit_index < stamps.count - 1) {
+                        stamps.positions[hit_index] = stamps.positions[stamps.count - 1];
+                    }
+                    stamps.count--;
+                    // 更新 stamps 显示
+                    drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
+                }
+            } else {
                 // 将最后一个方块移到当前位置
                 if (hit_index < stamps.count - 1) {
                     stamps.positions[hit_index] = stamps.positions[stamps.count - 1];
@@ -178,6 +184,33 @@ void updateWanderingDot(WanderingDot& dot, StampPositions& stamps, st7789::ST778
                 stamps.count--;
                 // 更新 stamps 显示
                 drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
+            }
+        } else {
+            // 增加碰撞计数
+            stamps.positions[hit_index].hit_count++;
+            
+            // 如果是铁方块，需要8次碰撞
+            if (stamps.positions[hit_index].is_iron) {
+                if (stamps.positions[hit_index].hit_count >= 8) {
+                    // 将最后一个方块移到当前位置
+                    if (hit_index < stamps.count - 1) {
+                        stamps.positions[hit_index] = stamps.positions[stamps.count - 1];
+                    }
+                    stamps.count--;
+                    // 更新 stamps 显示
+                    drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
+                }
+            } else {
+                // 普通方块需要2次碰撞
+                if (stamps.positions[hit_index].hit_count >= 2) {
+                    // 将最后一个方块移到当前位置
+                    if (hit_index < stamps.count - 1) {
+                        stamps.positions[hit_index] = stamps.positions[stamps.count - 1];
+                    }
+                    stamps.count--;
+                    // 更新 stamps 显示
+                    drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
+                }
             }
         }
         
@@ -399,12 +432,23 @@ int main() {
                     if (isPositionInValidArea(block_pos) && !isPositionOccupied(block_pos, stamps)) {
                         stamps.positions[stamps.count].pos = block_pos;
                         stamps.positions[stamps.count].hit_count = 0;  // 初始化碰撞计数
+                        stamps.positions[stamps.count].is_iron = false;
                         stamps.count++;
-                        drawBlock(lcd, block_pos, true);
+                        drawBlock(lcd, block_pos, true, false);
                         drawRemainingStamps(lcd, MAX_STAMPS - stamps.count);
                         printf("mid(%d)\n", stamps.count);
                     } else {
-                        printf("Position invalid or already occupied\n");
+                        // 检查是否在已有方块上
+                        for (uint8_t i = 0; i < stamps.count; i++) {
+                            if (abs(block_pos.x - stamps.positions[i].pos.x) < BLOCK_SIZE &&
+                                abs(block_pos.y - stamps.positions[i].pos.y) < BLOCK_SIZE) {
+                                // 如果找到重叠的方块，将其转换为铁方块
+                                stamps.positions[i].is_iron = true;
+                                drawBlock(lcd, stamps.positions[i].pos, true, true);
+                                printf("Convert to iron block\n");
+                                break;
+                            }
+                        }
                     }
                 } else {
                     // 当 stamps 数量达到最大值时，让 stamps 显示闪烁三次
@@ -528,7 +572,7 @@ int main() {
                 // 清除旧方块
                 clearBlock(lcd, old_pos);
                 // 绘制新方块（非盖章方块）
-                drawBlock(lcd, block_pos, false);
+                drawBlock(lcd, block_pos, false, false);
                 // 重新绘制所有盖章方块
                 drawAllStamps(lcd, stamps);
                 // 重新绘制红线

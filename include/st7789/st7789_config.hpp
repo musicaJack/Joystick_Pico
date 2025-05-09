@@ -15,7 +15,8 @@ enum Color {
     BLUE      = 0x001F,
     YELLOW    = 0xFFE0,
     CYAN      = 0x07FF,
-    MAGENTA   = 0xF81F
+    MAGENTA   = 0xF81F,
+    GRAY      = 0x7BEF
 };
 
 // Rotation direction
