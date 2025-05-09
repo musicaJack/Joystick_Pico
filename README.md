@@ -3,7 +3,6 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20Pico-brightgreen.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)
-
 English | [中文](README.zh.md)
 
 This is a driver for the Raspberry Pi Pico platform that supports both joystick module and ST7789 display. The driver provides comprehensive joystick control, button detection, direction recognition, RGB status indication, and display support.
@@ -212,22 +211,23 @@ This example implements an interesting physics-based collision game, demonstrati
 #### Game Rules
 
 1. **Game Objective**:
-   - Eliminate as many red blocks as possible within the time limit (20 seconds)
-   - Control the green dot using the joystick
-   - Eliminate red blocks through collisions
+   - Use the joystick to control coordinate movement and place blue blocks
+   - Long press the joystick Mid button (3 seconds) to release the green ball
+   - Prevent the ball from hitting the boundaries by strategically placing limited blue blocks within the time limit
 
 2. **Game Elements**:
-   - Green dot: Player-controlled character
-   - Red blocks: Targets to be eliminated
-   - Blue lines: Upper and lower boundaries
-   - Timer: Shows remaining time
-   - Remaining blocks counter: Shows number of blocks to be eliminated
+   - Green dot: System-generated character
+   - Blue blocks: Characters used to protect the ball from hitting boundaries
+   - Red lines: Upper and lower boundaries
+   - Timer: 20-second countdown display
+   - Remaining blocks counter: Shows the number of available blocks
 
 3. **Game Mechanics**:
-   - Each red block requires two collisions to disappear
-   - Dots bounce off boundaries
-   - Dots change direction when hitting red blocks
-   - Final score is displayed when time runs out
+   - Each blue block requires two collisions to disappear
+   - Green dot bounces off left and right boundaries
+   - Green dot bounces off blue blocks
+   - Game time is 20 seconds
+   - Victory is achieved if the green ball survives without hitting boundaries within 20 seconds
 
 4. **Control Method**:
    - Use joystick to control the green dot's movement
