@@ -1,33 +1,55 @@
 # Joystick_Pico Driver
 
-This is a C++ driver for controlling Joystick modules with the Raspberry Pi Pico platform. The driver provides comprehensive joystick control, button detection, direction recognition, and RGB status indication.
+这是一个用于树莓派 Pico 平台的摇杆模块和 ST7789 显示屏驱动程序。该驱动提供了完整的摇杆控制、按钮检测、方向识别、RGB 状态指示以及显示屏支持。
 
-## Features
+## 功能特点
 
-- I2C communication (100kHz default, configurable)
-- 12-bit and 8-bit ADC value reading
-- Enhanced direction detection (up, down, left, right, center)
-- Advanced debouncing and stability algorithms
-- Button state detection
-- RGB LED status indication
-- Calibration capabilities
-- Complete error handling
-- Direction stability enhancements
+### 摇杆模块
+- I2C 通信（默认 100kHz，可配置）
+- 12位和 8位 ADC 值读取
+- 增强的方向检测（上、下、左、右、中心）
+- 高级去抖动和稳定性算法
+- 按钮状态检测
+- RGB LED 状态指示
+- 校准功能
+- 完整的错误处理
+- 方向稳定性增强
 
-## Hardware Requirements
+### ST7789 显示屏
+- SPI 通信接口
+- 支持多种分辨率
+- 内置显示缓冲区
+- 支持基本图形绘制
+- 支持文本显示
+- 支持图片显示
 
-- Raspberry Pi Pico
-- Joystick module (I2C interface)
-- Connection cables (SDA, SCL, VCC, GND)
+## 硬件要求
 
-## Pin Connections
+- 树莓派 Pico
+- 摇杆模块（I2C 接口）
+- ST7789 显示屏（可选）
+- 连接线（SDA、SCL、VCC、GND）
 
-| Pico Pin | Joystick Pin | Description |
-|----------|--------------|-------------|
-| GPIO6    | SDA          | I2C data line |
-| GPIO7    | SCL          | I2C clock line |
-| 3V3      | VCC          | Power positive |
-| GND      | GND          | Power negative |
+## 引脚连接
+
+### 摇杆模块
+| Pico 引脚 | 摇杆引脚 | 描述 |
+|----------|----------|------|
+| GPIO6    | SDA      | I2C 数据线 |
+| GPIO7    | SCL      | I2C 时钟线 |
+| 3V3      | VCC      | 电源正极 |
+| GND      | GND      | 电源负极 |
+
+### ST7789 显示屏
+| Pico 引脚 | 显示屏引脚 | 描述 |
+|----------|------------|------|
+| GPIO16   | SCLK      | SPI 时钟线 |
+| GPIO17   | MOSI      | SPI 数据线 |
+| GPIO18   | CS        | 片选信号 |
+| GPIO19   | DC        | 数据/命令选择 |
+| GPIO20   | RST       | 复位信号 |
+| 3V3      | VCC       | 电源正极 |
+| GND      | GND       | 电源负极 |
 
 ## Quick Start
 
@@ -177,3 +199,62 @@ MIT License
 ## Contributions
 
 Issues and Pull Requests are welcome to improve this project. 
+
+## 示例代码
+
+项目提供了两个主要示例：
+
+1. `examples/joystick_test.cpp` - 基础摇杆测试示例
+2. `examples/joystick_st7789.cpp` - 摇杆与显示屏集成示例
+
+### 基础摇杆示例
+```cpp
+#include "joystick.hpp"
+Joystick joystick;
+
+int main() {
+    // 初始化摇杆
+    joystick.begin(i2c1, 0x63, 6, 7);
+    
+    while (true) {
+        // 读取摇杆数据
+        uint16_t adc_x, adc_y;
+        joystick.get_joy_adc_16bits_value_xy(&adc_x, &adc_y);
+        
+        // 读取按钮状态
+        uint8_t button = joystick.get_button_value();
+        
+        sleep_ms(20);
+    }
+}
+```
+
+### 摇杆与显示屏集成示例
+```cpp
+#include "joystick.hpp"
+#include "st7789.hpp"
+
+Joystick joystick;
+ST7789 display;
+
+int main() {
+    // 初始化摇杆
+    joystick.begin(i2c1, 0x63, 6, 7);
+    
+    // 初始化显示屏
+    display.begin(16, 17, 18, 19, 20);
+    
+    while (true) {
+        // 读取摇杆数据并在显示屏上显示
+        uint16_t adc_x, adc_y;
+        joystick.get_joy_adc_16bits_value_xy(&adc_x, &adc_y);
+        
+        // 在显示屏上绘制摇杆位置
+        display.clear();
+        display.draw_circle(adc_x/256, adc_y/256, 5, 0xFFFF);
+        display.update();
+        
+        sleep_ms(20);
+    }
+}
+``` 

@@ -66,6 +66,9 @@ struct StampPositions {
     uint8_t count;
 };
 
+// 函数前向声明
+void drawRemainingStamps(st7789::ST7789& lcd, int remaining);
+
 // 绘制方块
 void drawBlock(st7789::ST7789& lcd, const BlockPosition& pos, bool is_stamp = false) {
     lcd.fillRect(pos.x, pos.y, BLOCK_SIZE, BLOCK_SIZE, is_stamp ? STAMP_COLOR : BLOCK_COLOR);
@@ -241,13 +244,6 @@ void drawCountdown(st7789::ST7789& lcd, int remaining_seconds) {
     lcd.drawString(2, 2, time_str, TEXT_COLOR, BG_COLOR, 2);
 }
 
-// 显示剩余方块数量
-void drawRemainingStamps(st7789::ST7789& lcd, int remaining) {
-    char stamps_str[20];
-    snprintf(stamps_str, sizeof(stamps_str), "Stamps: %02d", remaining);
-    lcd.drawString(2, SCREEN_HEIGHT - 20, stamps_str, TEXT_COLOR, BG_COLOR, 2);
-}
-
 // 检查位置是否已被占用
 bool isPositionOccupied(const BlockPosition& pos, const StampPositions& stamps) {
     for (uint8_t i = 0; i < stamps.count; i++) {
@@ -265,6 +261,13 @@ bool isPositionInValidArea(const BlockPosition& pos) {
     // 考虑方块的大小，确保整个方块都在有效区域内
     return (pos.y + BLOCK_SIZE <= BOTTOM_LINE_Y) && 
            (pos.y >= TOP_LINE_Y + LINE_WIDTH);
+}
+
+// 显示剩余方块数量
+void drawRemainingStamps(st7789::ST7789& lcd, int remaining) {
+    char stamps_str[20];
+    snprintf(stamps_str, sizeof(stamps_str), "Stamps: %02d", remaining);
+    lcd.drawString(2, SCREEN_HEIGHT - 20, stamps_str, TEXT_COLOR, BG_COLOR, 2);
 }
 
 int main() {
