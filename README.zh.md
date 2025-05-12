@@ -4,8 +4,8 @@
 ![平台](https://img.shields.io/badge/平台-Raspberry%20Pi%20Pico-brightgreen.svg)
 ![版本](https://img.shields.io/badge/版本-1.0.0-orange.svg)
 [English](README.md) | 中文
-![affect1](imgs/Edge_Guardian.jpg)
-![affect2](imgs/Little_bee.jpg)
+![affect1](imgs/CollisionX.jpg)
+![affect2](imgs/PicoPilot.jpg)
 这是一个用于树莓派 Pico 平台的摇杆模块和 ST7789 显示屏驱动程序。该驱动提供了完整的摇杆控制、按钮检测、方向识别、RGB 状态指示以及显示屏支持。
 
 ## 功能特点
