@@ -47,6 +47,13 @@ add_executable(joystick_st7789
     ${ST7789_SOURCES}
 )
 
+# Little bees game executable
+add_executable(little_bees
+    examples/little_bees.cpp
+    ${COMMON_SOURCES}
+    ${ST7789_SOURCES}
+)
+
 # Link libraries for joystick_test
 target_link_libraries(joystick_test
     pico_stdlib
@@ -61,14 +68,25 @@ target_link_libraries(joystick_st7789
     hardware_dma
 )
 
-# Enable USB stdio for both executables
+# Link libraries for little_bees
+target_link_libraries(little_bees
+    pico_stdlib
+    hardware_i2c
+    hardware_spi
+    hardware_dma
+)
+
+# Enable USB stdio for all executables
 pico_enable_stdio_usb(joystick_test 1)
 pico_enable_stdio_usb(joystick_st7789 1)
+pico_enable_stdio_usb(little_bees 1)
 
-# Disable UART stdio for both executables
+# Disable UART stdio for all executables
 pico_enable_stdio_uart(joystick_test 0)
 pico_enable_stdio_uart(joystick_st7789 0)
+pico_enable_stdio_uart(little_bees 0)
 
 # Add other build options if needed (e.g., UF2 generation)
 pico_add_extra_outputs(joystick_test)
 pico_add_extra_outputs(joystick_st7789)
+pico_add_extra_outputs(little_bees)
