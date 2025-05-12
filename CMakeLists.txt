@@ -40,16 +40,16 @@ add_executable(joystick_test
     ${COMMON_SOURCES}
 )
 
-# Joystick ST7789 integration executable
-add_executable(joystick_st7789
-    examples/joystick_st7789.cpp
+# PicoPilot game executable
+add_executable(PicoPilot
+    examples/PicoPilot.cpp
     ${COMMON_SOURCES}
     ${ST7789_SOURCES}
 )
 
-# Little bees game executable
-add_executable(little_bees
-    examples/little_bees.cpp
+# CollisionX game executable
+add_executable(CollisionX
+    examples/CollisionX.cpp
     ${COMMON_SOURCES}
     ${ST7789_SOURCES}
 )
@@ -60,16 +60,16 @@ target_link_libraries(joystick_test
     hardware_i2c
 )
 
-# Link libraries for joystick_st7789
-target_link_libraries(joystick_st7789
+# Link libraries for PicoPilot
+target_link_libraries(PicoPilot
     pico_stdlib
     hardware_i2c
     hardware_spi
     hardware_dma
 )
 
-# Link libraries for little_bees
-target_link_libraries(little_bees
+# Link libraries for CollisionX
+target_link_libraries(CollisionX
     pico_stdlib
     hardware_i2c
     hardware_spi
@@ -78,15 +78,15 @@ target_link_libraries(little_bees
 
 # Enable USB stdio for all executables
 pico_enable_stdio_usb(joystick_test 1)
-pico_enable_stdio_usb(joystick_st7789 1)
-pico_enable_stdio_usb(little_bees 1)
+pico_enable_stdio_usb(PicoPilot 1)
+pico_enable_stdio_usb(CollisionX 1)
 
 # Disable UART stdio for all executables
 pico_enable_stdio_uart(joystick_test 0)
-pico_enable_stdio_uart(joystick_st7789 0)
-pico_enable_stdio_uart(little_bees 0)
+pico_enable_stdio_uart(PicoPilot 0)
+pico_enable_stdio_uart(CollisionX 0)
 
 # Add other build options if needed (e.g., UF2 generation)
 pico_add_extra_outputs(joystick_test)
-pico_add_extra_outputs(joystick_st7789)
-pico_add_extra_outputs(little_bees)
+pico_add_extra_outputs(PicoPilot)
+pico_add_extra_outputs(CollisionX)

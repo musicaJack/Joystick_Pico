@@ -4,8 +4,8 @@
 ![平台](https://img.shields.io/badge/平台-Raspberry%20Pi%20Pico-brightgreen.svg)
 ![版本](https://img.shields.io/badge/版本-1.0.0-orange.svg)
 [English](README.md) | 中文
-![affect1](imgs/CollisionX.jpg)
-![affect2](imgs/PicoPilot.jpg)
+<img src="imgs/CollisionX.jpg" alt="affect1" width="300"/>
+<img src="imgs/PicoPilot.jpg" alt="affect2" width="300"/>
 这是一个用于树莓派 Pico 平台的摇杆模块和 ST7789 显示屏驱动程序。该驱动提供了完整的摇杆控制、按钮检测、方向识别、RGB 状态指示以及显示屏支持。
 
 ## 功能特点
@@ -196,7 +196,7 @@ Key parameters in `main.cpp`:
 
 ## Example Code
 
-项目提供了两个主要示例，展示了不同的使用场景：
+项目提供了三个主要示例，展示了不同的使用场景：
 
 ### 1. 基础摇杆测试示例 (`examples/joystick_test.cpp`)
 
@@ -212,7 +212,7 @@ Key parameters in `main.cpp`:
 - 支持连续操作和即时响应
 - 通过 LED 指示操作状态
 
-### 2. 摇杆与显示屏集成示例 (`examples/joystick_st7789.cpp`)
+### 2. 摇杆与显示屏集成示例 (`examples/CollisionX.cpp`)
 
 这个示例实现了一个有趣的物理碰撞游戏，展示了如何将摇杆与 ST7789 显示屏结合使用。
 
@@ -276,6 +276,83 @@ Key parameters in `main.cpp`:
 | 游戏逻辑 | - | ✓ |
 | 实时显示 | - | ✓ |
 
+### 3. Pico先锋游戏（PicoPilot Game）(`examples/PicoPilot.cpp`)
+
+#### 游戏说明
+这是一个基于 Raspberry Pi Pico 和 ST7789 显示屏的简单射击游戏。玩家控制一艘宇宙飞船，射击屏幕顶部的移动目标。
+
+#### 游戏规则
+1. 游戏开始时，屏幕顶部会出现一个移动的圆球目标
+2. 圆球会随机速度横向移动，碰到屏幕边界会反弹
+3. 圆球需要被击中5次才会完全消失：
+   - 初始状态：圆球体积为5倍
+   - 第一次击中：体积变为4倍
+   - 第二次击中：体积变为3倍
+   - 第三次击中：体积变为2倍
+   - 第四次击中：体积变为1倍
+   - 第五次击中：目标消失，显示胜利信息
+
+#### 控制方式
+- 使用摇杆控制飞船移动：
+  - 上：飞船向上移动
+  - 下：飞船向下移动
+  - 左：飞船向左移动
+  - 右：飞船向右移动
+- 按下摇杆中间按钮发射导弹
+
+#### 计分规则
+- 每次击中目标都会获得分数
+- 分数基于当前目标的大小：
+  - 5倍大小：5分
+  - 4倍大小：4分
+  - 3倍大小：3分
+  - 2倍大小：2分
+  - 1倍大小：1分
+
+#### 游戏结束条件
+- 当目标被击中5次后，显示"You Win!"信息
+- 按中间按钮可以重新开始游戏
+
+#### 硬件要求
+- Raspberry Pi Pico
+- ST7789显示屏
+- 摇杆控制器
+
+#### 接线说明
+显示屏连接：
+- MOSI: GPIO19
+- SCK: GPIO18
+- CS: GPIO17
+- DC: GPIO20
+- RESET: GPIO15
+- Backlight: GPIO10
+
+摇杆连接：
+- 通过I2C接口连接
+- SDA和SCL引脚根据配置设置
+
+#### 编译和运行
+1. 确保已安装Raspberry Pi Pico SDK
+2. 在项目目录下创建build文件夹：
+   ```bash
+   mkdir build
+   cd build
+   ```
+3. 运行CMake配置：
+   ```bash
+   cmake ..
+   ```
+4. 编译项目：
+   ```bash
+   make
+   ```
+5. 将生成的.uf2文件烧录到Pico开发板
+
+#### 注意事项
+- 游戏运行需要稳定的电源供应
+- 确保显示屏和摇杆正确连接
+- 如果游戏运行不稳定，可以尝试降低刷新率
+
 ## License
 
 MIT License
@@ -286,10 +363,11 @@ Issues and Pull Requests are welcome to improve this project.
 
 ## 示例代码
 
-项目提供了两个主要示例：
+项目提供了三个主要示例：
 
 1. `examples/joystick_test.cpp` - 基础摇杆测试示例
-2. `examples/joystick_st7789.cpp` - 摇杆与显示屏集成示例
+2. `examples/CollisionX.cpp` - 碰撞游戏
+3. `examples/PicoPilot.cpp` - Pico先锋游戏
 
 ### 基础摇杆示例
 ```cpp
@@ -313,7 +391,7 @@ int main() {
 }
 ```
 
-### 摇杆与显示屏集成示例
+### 碰撞游戏
 ```cpp
 #include "joystick.hpp"
 #include "st7789.hpp"

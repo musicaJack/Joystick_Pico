@@ -4,8 +4,8 @@
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20Pico-brightgreen.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)
 English | [中文](README.zh.md)
-![affect1](imgs/CollisionX.jpg)
-![affect2](imgs/PicoPilot.jpg)
+<img src="imgs/CollisionX.jpg" alt="affect1" width="300"/>
+<img src="imgs/PicoPilot.jpg" alt="affect2" width="300"/>
 This is a driver for the Raspberry Pi Pico platform that supports both joystick module and ST7789 display. The driver provides comprehensive joystick control, button detection, direction recognition, RGB status indication, and display support.
 
 ## Features
@@ -205,7 +205,7 @@ Key features:
 - Supports continuous operation and immediate response
 - Indicates operation state through LED
 
-### 2. Joystick with Display Integration Example (`examples/joystick_st7789.cpp`)
+### 2. Joystick with Display Integration Example (`examples/CollisionX.cpp`)
 
 This example implements an interesting physics-based collision game, demonstrating how to integrate the joystick with the ST7789 display.
 
@@ -269,6 +269,83 @@ This example implements an interesting physics-based collision game, demonstrati
 | Collision Detection | - | ✓ |
 | Game Logic | - | ✓ |
 | Real-time Display | - | ✓ |
+
+### 3. PicoPilot Game (`examples/PicoPilot.cpp`)
+
+#### Game Description
+This is a simple shooting game based on Raspberry Pi Pico and ST7789 display. The player controls a spaceship to shoot at a moving target at the top of the screen.
+
+#### Game Rules
+1. At the start of the game, a moving ball target appears at the top of the screen.
+2. The ball moves horizontally at a random speed and bounces off the screen edges.
+3. The ball must be hit 5 times to disappear completely:
+   - Initial state: ball size is 5x
+   - First hit: size becomes 4x
+   - Second hit: size becomes 3x
+   - Third hit: size becomes 2x
+   - Fourth hit: size becomes 1x
+   - Fifth hit: target disappears and a victory message is shown
+
+#### Controls
+- Use the joystick to move the spaceship:
+  - Up: move up
+  - Down: move down
+  - Left: move left
+  - Right: move right
+- Press the joystick middle button to fire a missile
+
+#### Scoring
+- Each hit on the target earns points
+- The score is based on the current size of the target:
+  - 5x size: 5 points
+  - 4x size: 4 points
+  - 3x size: 3 points
+  - 2x size: 2 points
+  - 1x size: 1 point
+
+#### Game Over
+- When the target is hit 5 times, "You Win!" is displayed
+- Press the middle button to restart the game
+
+#### Hardware Requirements
+- Raspberry Pi Pico
+- ST7789 display
+- Joystick controller
+
+#### Wiring
+Display:
+- MOSI: GPIO19
+- SCK: GPIO18
+- CS: GPIO17
+- DC: GPIO20
+- RESET: GPIO15
+- Backlight: GPIO10
+
+Joystick:
+- Connected via I2C
+- SDA and SCL pins as configured
+
+#### Build and Run
+1. Make sure the Raspberry Pi Pico SDK is installed
+2. Create a build folder in the project directory:
+   ```bash
+   mkdir build
+   cd build
+   ```
+3. Run CMake configuration:
+   ```bash
+   cmake ..
+   ```
+4. Build the project:
+   ```bash
+   make
+   ```
+5. Flash the generated .uf2 file to the Pico board
+
+#### Notes
+- The game requires a stable power supply
+- Ensure the display and joystick are connected correctly
+- If the game is unstable, try lowering the refresh rate
 
 ## Notes
 
