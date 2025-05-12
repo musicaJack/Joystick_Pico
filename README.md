@@ -4,7 +4,8 @@
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20Pico-brightgreen.svg)
 ![Version](https://img.shields.io/badge/version-1.0.0-orange.svg)
 English | [中文](README.zh.md)
-
+![affect1](imgs/Edge_Guardian.jpg)
+![affect2](imgs/Little_bee.jpg)
 This is a driver for the Raspberry Pi Pico platform that supports both joystick module and ST7789 display. The driver provides comprehensive joystick control, button detection, direction recognition, RGB status indication, and display support.
 
 ## Features
