@@ -355,6 +355,10 @@ int main() {
     }
     
     printf("Initialization successful!\n");
+    // 初始化成功，绿灯亮1秒后熄灭
+    joystick.set_rgb_color(JOYSTICK_LED_GREEN);
+    sleep_ms(1000);
+    joystick.set_rgb_color(JOYSTICK_LED_OFF);
     
     // 清屏并显示启动提示
     lcd.clearScreen(BG_COLOR);
@@ -399,6 +403,8 @@ int main() {
     bool game_started = false;
     uint32_t game_start_time = 0;
     int remaining_seconds = GAME_TIME;
+    // 新增LED状态变量
+    static bool is_active = false;
     
     while (true) {
         // 检查MID按钮状态
@@ -525,13 +531,38 @@ int main() {
             drawCountdown(lcd, remaining_seconds);
         }
 
-        // 读取摇杆数据
+        // 检查方向（摇杆移动）
+        uint16_t adc_x = 0, adc_y = 0;
+        joystick.get_joy_adc_16bits_value_xy(&adc_x, &adc_y);
         int16_t offset_x = joystick.get_joy_adc_12bits_offset_value_x();
         int16_t offset_y = joystick.get_joy_adc_12bits_offset_value_y();
-        
-        // 获取方向
         int raw_direction = determine_joystick_direction(offset_x, offset_y);
-        
+        // 检查mid键
+        bool mid_pressed = (joystick.get_button_value() == 0);
+        static bool last_mid_pressed = false;
+        static absolute_time_t last_red_time = {0};
+        // 检测mid键按下的瞬间
+        if (mid_pressed && !last_mid_pressed) {
+            joystick.set_rgb_color(JOYSTICK_LED_RED);
+            last_red_time = get_absolute_time();
+        }
+        // 50ms后自动关灯
+        if (!is_nil_time(last_red_time) && absolute_time_diff_us(last_red_time, get_absolute_time()) > 50000) {
+            joystick.set_rgb_color(JOYSTICK_LED_OFF);
+            last_red_time = {0};
+        }
+        last_mid_pressed = mid_pressed;
+        // 其余LED逻辑
+        if (!mid_pressed && last_red_time == (absolute_time_t){0}) {
+            if (raw_direction > 0 && !is_active) {
+                is_active = true;
+                joystick.set_rgb_color(JOYSTICK_LED_BLUE);
+            } else if (raw_direction == 0 && is_active) {
+                is_active = false;
+                joystick.set_rgb_color(JOYSTICK_LED_OFF);
+            }
+        }
+
         // 防抖动处理
         if (raw_direction == previous_raw_direction) {
             if (stable_count < 3) {
@@ -552,11 +583,11 @@ int main() {
             // 根据方向移动方块
             switch (raw_direction) {
                 case 1:  // 上
-                    block_pos.y = (block_pos.y - MOVE_STEP < 0) ? 0 : block_pos.y - MOVE_STEP;
+                    block_pos.y = (block_pos.y - MOVE_STEP < TOP_LINE_Y + LINE_WIDTH) ? (TOP_LINE_Y + LINE_WIDTH) : block_pos.y - MOVE_STEP;
                     break;
                 case 2:  // 下
-                    block_pos.y = (block_pos.y + MOVE_STEP > SCREEN_HEIGHT - BLOCK_SIZE) ? 
-                                 SCREEN_HEIGHT - BLOCK_SIZE : block_pos.y + MOVE_STEP;
+                    block_pos.y = (block_pos.y + MOVE_STEP > BOTTOM_LINE_Y - BLOCK_SIZE) ? 
+                                 BOTTOM_LINE_Y - BLOCK_SIZE : block_pos.y + MOVE_STEP;
                     break;
                 case 3:  // 左
                     block_pos.x = (block_pos.x - MOVE_STEP < 0) ? 0 : block_pos.x - MOVE_STEP;

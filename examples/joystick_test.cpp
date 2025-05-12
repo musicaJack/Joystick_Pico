@@ -100,15 +100,12 @@ void loop() {
     
     // Declare joystick-related variables
     uint16_t adc_x = 0, adc_y = 0;
-    int16_t offset_x = 0, offset_y = 0;
     
     // Priority read button status (0=pressed, 1=not pressed)
     uint8_t button_state = joystick.get_button_value();
     
     // Read joystick data (regardless of button press to ensure state updates are available)
     joystick.get_joy_adc_16bits_value_xy(&adc_x, &adc_y);
-    offset_x = joystick.get_joy_adc_12bits_offset_value_x();
-    offset_y = joystick.get_joy_adc_12bits_offset_value_y();
     
     // Get raw direction signal
     int raw_direction = 0;
@@ -119,7 +116,7 @@ void loop() {
     } 
     // Only detect joystick direction when button is not pressed
     else {
-        raw_direction = determine_joystick_direction(offset_x, offset_y);
+        raw_direction = determine_joystick_direction(adc_x, adc_y);
     }
     
     // Enhanced debouncing processing
@@ -186,8 +183,8 @@ void loop() {
     
     // Update previous states
     last_button_state = button_state;
-    last_offset_x = offset_x;
-    last_offset_y = offset_y;
+    last_offset_x = adc_x;
+    last_offset_y = adc_y;
     
     // Reduced loop delay to 20ms to improve response speed
     sleep_ms(JOYSTICK_LOOP_DELAY_MS);

@@ -215,7 +215,7 @@ void updateGame(GameState& game, int direction, bool fire, st7789::ST7789& lcd) 
     
     // 更新飞船位置
     if (direction == 1) {  // 上
-        game.spaceship.y = std::max(0, game.spaceship.y - SPACESHIP_SPEED);
+        game.spaceship.y = std::max(20, game.spaceship.y - SPACESHIP_SPEED);
     } else if (direction == 2) {  // 下
         game.spaceship.y = std::min(SCREEN_HEIGHT - SPACESHIP_SIZE, game.spaceship.y + SPACESHIP_SPEED);
     } else if (direction == 3) {  // 左
@@ -401,6 +401,10 @@ int main() {
     }
     
     printf("Initialization successful!\n");
+    // 初始化成功，绿灯亮1秒后熄灭
+    joystick.set_rgb_color(JOYSTICK_LED_GREEN);
+    sleep_ms(1000);
+    joystick.set_rgb_color(JOYSTICK_LED_OFF);
     
     // 清屏并显示启动提示
     lcd.clearScreen(BG_COLOR);
@@ -429,23 +433,44 @@ int main() {
     drawScore(lcd, game.score);
     
     // 主循环
+    static bool is_active = false;
     while (true) {
         // 获取摇杆方向
         uint16_t adc_x = 0, adc_y = 0;
-        int16_t offset_x = 0, offset_y = 0;
-        
-        // 读取摇杆数据
         joystick.get_joy_adc_16bits_value_xy(&adc_x, &adc_y);
-        offset_x = joystick.get_joy_adc_12bits_offset_value_x();
-        offset_y = joystick.get_joy_adc_12bits_offset_value_y();
-        
-        int direction = determine_joystick_direction(offset_x, offset_y);
-        
+        int16_t offset_x = joystick.get_joy_adc_12bits_offset_value_x();
+        int16_t offset_y = joystick.get_joy_adc_12bits_offset_value_y();
+        int raw_direction = determine_joystick_direction(offset_x, offset_y);
+        // 检查mid键
+        bool mid_pressed = (joystick.get_button_value() == 0);
+        static bool last_mid_pressed = false;
+        static absolute_time_t last_red_time = {0};
+        // 检测mid键按下的瞬间
+        if (mid_pressed && !last_mid_pressed) {
+            joystick.set_rgb_color(JOYSTICK_LED_RED);
+            last_red_time = get_absolute_time();
+        }
+        // 50ms后自动关灯
+        if (!is_nil_time(last_red_time) && absolute_time_diff_us(last_red_time, get_absolute_time()) > 50000) {
+            joystick.set_rgb_color(JOYSTICK_LED_OFF);
+            last_red_time = {0};
+        }
+        last_mid_pressed = mid_pressed;
+        // 其余LED逻辑
+        if (!mid_pressed && last_red_time == (absolute_time_t){0}) {
+            if (raw_direction > 0 && !is_active) {
+                is_active = true;
+                joystick.set_rgb_color(JOYSTICK_LED_BLUE);
+            } else if (raw_direction == 0 && is_active) {
+                is_active = false;
+                joystick.set_rgb_color(JOYSTICK_LED_OFF);
+            }
+        }
         // 获取按键状态
-        bool fire = (joystick.get_button_value() == 0);
+        bool fire = mid_pressed;
         
         // 更新游戏状态
-        updateGame(game, direction, fire, lcd);
+        updateGame(game, raw_direction, fire, lcd);
         
         // 如果游戏结束，等待重新开始
         if (game.game_over && fire) {
