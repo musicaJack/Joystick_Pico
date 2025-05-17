@@ -40,6 +40,13 @@ add_executable(joystick_test
     ${COMMON_SOURCES}
 )
 
+# GameLauncher executable
+add_executable(GameLauncher
+    examples/GameLauncher.cpp
+    ${COMMON_SOURCES}
+    ${ST7789_SOURCES}
+)
+
 # PicoPilot game executable
 add_executable(PicoPilot
     examples/PicoPilot.cpp
@@ -60,6 +67,14 @@ target_link_libraries(joystick_test
     hardware_i2c
 )
 
+# Link libraries for GameLauncher
+target_link_libraries(GameLauncher
+    pico_stdlib
+    hardware_i2c
+    hardware_spi
+    hardware_dma
+)
+
 # Link libraries for PicoPilot
 target_link_libraries(PicoPilot
     pico_stdlib
@@ -78,15 +93,18 @@ target_link_libraries(CollisionX
 
 # Enable USB stdio for all executables
 pico_enable_stdio_usb(joystick_test 1)
+pico_enable_stdio_usb(GameLauncher 1)
 pico_enable_stdio_usb(PicoPilot 1)
 pico_enable_stdio_usb(CollisionX 1)
 
 # Disable UART stdio for all executables
 pico_enable_stdio_uart(joystick_test 0)
+pico_enable_stdio_uart(GameLauncher 0)
 pico_enable_stdio_uart(PicoPilot 0)
 pico_enable_stdio_uart(CollisionX 0)
 
 # Add other build options if needed (e.g., UF2 generation)
 pico_add_extra_outputs(joystick_test)
+pico_add_extra_outputs(GameLauncher)
 pico_add_extra_outputs(PicoPilot)
 pico_add_extra_outputs(CollisionX)
